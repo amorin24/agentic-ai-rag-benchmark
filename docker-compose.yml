@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  rag_service:
+    build:
+      context: .
+      dockerfile: docker/rag_service.Dockerfile
+    ports:
+      - "${RAG_SERVICE_PORT:-8000}:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - rag_benchmark_network
+
+  agent_runner:
+    build:
+      context: .
+      dockerfile: docker/agent_runner.Dockerfile
+    depends_on:
+      rag_service:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - AGENT_FRAMEWORK=${AGENT_FRAMEWORK:-crewai}  # Default to crewai if not specified
+    networks:
+      - rag_benchmark_network
+    command: ["python", "-m", "agents.${AGENT_FRAMEWORK:-crewai}.runner"]
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui.Dockerfile
+    ports:
+      - "${UI_PORT:-3000}:3000"
+    depends_on:
+      - rag_service
+      - agent_runner
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - REACT_APP_RAG_SERVICE_URL=http://rag_service:8000
+    networks:
+      - rag_benchmark_network
+
+networks:
+  rag_benchmark_network:
+    driver: bridge
