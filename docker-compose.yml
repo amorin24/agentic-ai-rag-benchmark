@@ -47,6 +47,9 @@ services:
     depends_on:
       - rag_service
       - agent_runner
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
     env_file:
       - .env
     environment:
