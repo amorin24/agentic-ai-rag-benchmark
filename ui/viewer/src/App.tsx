@@ -1,31 +1,27 @@
 import React, { useState } from 'react';
-import { 
-  Container, 
-  Box, 
-  Typography, 
-  TextField, 
-  Button, 
-  Grid, 
-  Paper, 
-  Tabs, 
-  Tab, 
-  CircularProgress 
-} from '@mui/material';
 import axios from 'axios';
 
+interface AgentStep {
+  type: string;
+  timestamp: string;
+  details: any;
+}
+
 interface AgentResponse {
-  result: string;
-  reasoning: string;
-  rag_queries: {
-    query: string;
-    retrieved_context: string;
-    usage: string;
-  }[];
-  metrics: {
-    time_taken: number;
-    tokens_used: number;
-    rag_calls: number;
-  };
+  agent_name: string;
+  final_output: string;
+  steps: AgentStep[];
+  token_usage: number;
+  response_time: number;
+}
+
+interface AgentResults {
+  crewai?: AgentResponse;
+  autogen?: AgentResponse;
+  langgraph?: AgentResponse;
+  googleadk?: AgentResponse;
+  squidai?: AgentResponse;
+  lettaai?: AgentResponse;
 }
 
 interface TabPanelProps {
@@ -45,124 +41,83 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`agent-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <div className="p-4">{children}</div>}
+    </div>
+  );
+}
+
+interface CollapsibleProps {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+function Collapsible({ title, children, defaultOpen = false }: CollapsibleProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border rounded-md mb-4">
+      <button
+        className="w-full text-left p-3 font-medium flex justify-between items-center bg-gray-50 hover:bg-gray-100 rounded-t-md"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>{title}</span>
+        <span>{isOpen ? '▼' : '►'}</span>
+      </button>
+      {isOpen && <div className="p-3 border-t">{children}</div>}
     </div>
   );
 }
 
 function App() {
-  const [task, setTask] = useState('');
+  const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
-  const [results, setResults] = useState<{
-    crewai?: AgentResponse;
-    autogen?: AgentResponse;
-    langgraph?: AgentResponse;
-  }>({});
+  const [results, setResults] = useState<AgentResults>({});
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const companyOptions = [
+    'Apple Inc.',
+    'Microsoft Corporation',
+    'Amazon.com Inc.',
+    'Tesla Inc.',
+    'Netflix Inc.',
+    'Google LLC',
+  ];
+
+  const handleTabChange = (newValue: number) => {
     setTabValue(newValue);
   };
 
-  const handleSubmit = async () => {
-    if (!task) return;
+  const handleRunAgents = async () => {
+    if (!company) return;
     
     setLoading(true);
     
     try {
       
-      const crewaiPromise = new Promise<AgentResponse>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            result: `CrewAI solution for: ${task}`,
-            reasoning: "Step-by-step reasoning process would go here",
-            rag_queries: [
-              {
-                query: `Information needed for: ${task}`,
-                retrieved_context: "Placeholder context from RAG service",
-                usage: "Used to understand the task requirements"
-              }
-            ],
-            metrics: {
-              time_taken: 2.3,
-              tokens_used: 1500,
-              rag_calls: 1
-            }
-          });
-        }, 2300);
-      });
+      const crewaiPromise = simulateAgentRun('crewai', company);
+      const autogenPromise = simulateAgentRun('autogen', company);
+      const langgraphPromise = simulateAgentRun('langgraph', company);
+      const googleadkPromise = simulateAgentRun('googleadk', company);
+      const squidaiPromise = simulateAgentRun('squidai', company);
+      const lettaaiPromise = simulateAgentRun('lettaai', company);
       
-      const autogenPromise = new Promise<AgentResponse>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            result: `AutoGen solution for: ${task}`,
-            reasoning: "Step-by-step reasoning process would go here",
-            rag_queries: [
-              {
-                query: `Information needed for: ${task}`,
-                retrieved_context: "Placeholder context from RAG service",
-                usage: "Used to understand the task requirements"
-              },
-              {
-                query: `Additional details for: ${task}`,
-                retrieved_context: "More placeholder context from RAG service",
-                usage: "Used to gather more specific information"
-              }
-            ],
-            metrics: {
-              time_taken: 2.8,
-              tokens_used: 1800,
-              rag_calls: 2
-            }
-          });
-        }, 2800);
-      });
-      
-      const langgraphPromise = new Promise<AgentResponse>((resolve) => {
-        setTimeout(() => {
-          resolve({
-            result: `LangGraph solution for: ${task}`,
-            reasoning: "Step-by-step reasoning process through graph nodes would go here",
-            rag_queries: [
-              {
-                query: `Initial information for: ${task}`,
-                retrieved_context: "Placeholder context from RAG service",
-                usage: "Used to understand the task requirements"
-              },
-              {
-                query: `Specific details about: ${task}`,
-                retrieved_context: "More placeholder context from RAG service",
-                usage: "Used in the analysis node of the graph"
-              },
-              {
-                query: `Examples related to: ${task}`,
-                retrieved_context: "Example context from RAG service",
-                usage: "Used in the solution formulation node"
-              }
-            ],
-            metrics: {
-              time_taken: 3.5,
-              tokens_used: 2200,
-              rag_calls: 3
-            }
-          });
-        }, 3500);
-      });
-      
-      const [crewai, autogen, langgraph] = await Promise.all([
+      const [crewai, autogen, langgraph, googleadk, squidai, lettaai] = await Promise.all([
         crewaiPromise,
         autogenPromise,
-        langgraphPromise
+        langgraphPromise,
+        googleadkPromise,
+        squidaiPromise,
+        lettaaiPromise
       ]);
       
       setResults({
         crewai,
         autogen,
-        langgraph
+        langgraph,
+        googleadk,
+        squidai,
+        lettaai
       });
     } catch (error) {
       console.error('Error running agents:', error);
@@ -171,330 +126,326 @@ function App() {
     }
   };
 
+  const simulateAgentRun = (agentName: string, company: string): Promise<AgentResponse> => {
+    const timings: Record<string, number> = {
+      crewai: 2300,
+      autogen: 2800,
+      langgraph: 3500,
+      googleadk: 3000,
+      squidai: 2600,
+      lettaai: 3200
+    };
+    
+    const tokenUsage: Record<string, number> = {
+      crewai: 1500,
+      autogen: 1800,
+      langgraph: 2200,
+      googleadk: 1900,
+      squidai: 1600,
+      lettaai: 2000
+    };
+    
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          agent_name: agentName,
+          final_output: `${agentName.charAt(0).toUpperCase() + agentName.slice(1)} analysis for ${company}: This company has shown strong performance in recent quarters with innovative product launches and strategic partnerships. Market position remains competitive with opportunities for growth in emerging markets.`,
+          steps: [
+            {
+              type: 'planning',
+              timestamp: new Date().toISOString(),
+              details: {
+                thought: `Planning research approach for ${company}`,
+                plan: [
+                  `1. Gather general information about ${company}`,
+                  `2. Collect recent news and press releases`,
+                  `3. Research product portfolio and market position`,
+                  `4. Examine financial performance and trends`,
+                  `5. Analyze collected information and generate a report`
+                ]
+              }
+            },
+            {
+              type: 'rag_query',
+              timestamp: new Date().toISOString(),
+              details: {
+                query: `${company} company overview`,
+                results: [
+                  {
+                    text: `${company} is a leading organization in its industry, known for innovation and market leadership.`,
+                    score: 0.92
+                  }
+                ]
+              }
+            },
+            {
+              type: 'analysis',
+              timestamp: new Date().toISOString(),
+              details: {
+                thought: `Analyzing company profile of ${company}`,
+                insights: "Company has established a strong market position with significant industry presence."
+              }
+            }
+          ],
+          token_usage: tokenUsage[agentName],
+          response_time: timings[agentName] / 1000
+        });
+      }, timings[agentName]);
+    });
+  };
+
+  const getAgentNames = (): string[] => {
+    return Object.keys(results);
+  };
+
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">
           Agentic AI RAG Benchmark
-        </Typography>
+        </h1>
         
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Task Input
-          </Typography>
-          <TextField
-            fullWidth
-            label="Enter a task for the agents"
-            multiline
-            rows={3}
-            value={task}
-            onChange={(e) => setTask(e.target.value)}
-            variant="outlined"
-            sx={{ mb: 2 }}
-          />
-          <Button 
-            variant="contained" 
-            onClick={handleSubmit}
-            disabled={loading || !task}
+        {/* Input section */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">
+            Company Research
+          </h2>
+          
+          <div className="mb-4">
+            <label htmlFor="company-select" className="block text-sm font-medium text-gray-700 mb-1">
+              Select a company to research
+            </label>
+            <div className="flex gap-2">
+              <select
+                id="company-select"
+                className="flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+              >
+                <option value="">-- Select a company --</option>
+                {companyOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              
+              <input
+                type="text"
+                placeholder="Or enter a custom company name"
+                className="flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                value={company === '' || companyOptions.includes(company) ? '' : company}
+                onChange={(e) => setCompany(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <button
+            className={`px-4 py-2 rounded-md font-medium ${
+              loading || !company
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+            onClick={handleRunAgents}
+            disabled={loading || !company}
           >
-            {loading ? <CircularProgress size={24} /> : 'Run Agents'}
-          </Button>
-        </Paper>
+            {loading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Running Agents...
+              </span>
+            ) : (
+              'Run All Agents'
+            )}
+          </button>
+        </div>
         
-        {(results.crewai || results.autogen || results.langgraph) && (
-          <Paper sx={{ width: '100%' }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              aria-label="agent results tabs"
-              centered
-            >
-              <Tab label="CrewAI" />
-              <Tab label="AutoGen" />
-              <Tab label="LangGraph" />
-              <Tab label="Comparison" />
-            </Tabs>
+        {/* Results section */}
+        {getAgentNames().length > 0 && (
+          <div className="bg-white rounded-lg shadow-md">
+            {/* Tabs */}
+            <div className="border-b">
+              <div className="flex overflow-x-auto">
+                {getAgentNames().map((agentName, index) => (
+                  <button
+                    key={agentName}
+                    className={`px-4 py-3 font-medium text-sm ${
+                      tabValue === index
+                        ? 'border-b-2 border-blue-500 text-blue-600'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    onClick={() => handleTabChange(index)}
+                  >
+                    {agentName.charAt(0).toUpperCase() + agentName.slice(1)}
+                  </button>
+                ))}
+                <button
+                  className={`px-4 py-3 font-medium text-sm ${
+                    tabValue === getAgentNames().length
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  onClick={() => handleTabChange(getAgentNames().length)}
+                >
+                  Comparison
+                </button>
+              </div>
+            </div>
             
-            <TabPanel value={tabValue} index={0}>
-              {results.crewai ? (
-                <AgentResultPanel result={results.crewai} />
-              ) : (
-                <Typography>No results available</Typography>
-              )}
-            </TabPanel>
+            {/* Individual agent panels */}
+            {getAgentNames().map((agentName, index) => (
+              <TabPanel key={agentName} value={tabValue} index={index}>
+                <AgentResultPanel result={results[agentName as keyof AgentResults]!} />
+              </TabPanel>
+            ))}
             
-            <TabPanel value={tabValue} index={1}>
-              {results.autogen ? (
-                <AgentResultPanel result={results.autogen} />
-              ) : (
-                <Typography>No results available</Typography>
-              )}
+            {/* Comparison panel */}
+            <TabPanel value={tabValue} index={getAgentNames().length}>
+              <ComparisonPanel results={results} />
             </TabPanel>
-            
-            <TabPanel value={tabValue} index={2}>
-              {results.langgraph ? (
-                <AgentResultPanel result={results.langgraph} />
-              ) : (
-                <Typography>No results available</Typography>
-              )}
-            </TabPanel>
-            
-            <TabPanel value={tabValue} index={3}>
-              {(results.crewai && results.autogen && results.langgraph) ? (
-                <ComparisonPanel 
-                  crewai={results.crewai}
-                  autogen={results.autogen}
-                  langgraph={results.langgraph}
-                />
-              ) : (
-                <Typography>Complete results not available for comparison</Typography>
-              )}
-            </TabPanel>
-          </Paper>
+          </div>
         )}
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }
 
 function AgentResultPanel({ result }: { result: AgentResponse }) {
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        Result
-      </Typography>
-      <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-        <Typography>{result.result}</Typography>
-      </Paper>
+    <div>
+      <h3 className="text-xl font-semibold mb-4 text-gray-800">
+        {result.agent_name.charAt(0).toUpperCase() + result.agent_name.slice(1)} Results
+      </h3>
       
-      <Typography variant="h6" gutterBottom>
-        Reasoning
-      </Typography>
-      <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-        <Typography>{result.reasoning}</Typography>
-      </Paper>
+      <div className="bg-gray-50 p-4 rounded-md mb-6 border">
+        <h4 className="font-medium mb-2 text-gray-700">Final Output</h4>
+        <p className="text-gray-800 whitespace-pre-line">{result.final_output}</p>
+      </div>
       
-      <Typography variant="h6" gutterBottom>
-        RAG Queries
-      </Typography>
-      {result.rag_queries.map((query, index) => (
-        <Paper key={index} variant="outlined" sx={{ p: 2, mb: 2 }}>
-          <Typography variant="subtitle1">Query: {query.query}</Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>Context: {query.retrieved_context}</Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>Usage: {query.usage}</Typography>
-        </Paper>
-      ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-gray-50 p-4 rounded-md border">
+          <h4 className="font-medium mb-2 text-gray-700">Response Time</h4>
+          <p className="text-2xl font-bold text-blue-600">{result.response_time.toFixed(2)}s</p>
+        </div>
+        
+        <div className="bg-gray-50 p-4 rounded-md border">
+          <h4 className="font-medium mb-2 text-gray-700">Token Usage</h4>
+          <p className="text-2xl font-bold text-green-600">{result.token_usage.toLocaleString()}</p>
+        </div>
+      </div>
       
-      <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-        Metrics
-      </Typography>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography>Time taken: {result.metrics.time_taken.toFixed(2)}s</Typography>
-        <Typography>Tokens used: {result.metrics.tokens_used}</Typography>
-        <Typography>RAG calls: {result.metrics.rag_calls}</Typography>
-      </Paper>
-    </Box>
+      <Collapsible title="Execution Steps" defaultOpen={false}>
+        <div className="space-y-4">
+          {result.steps.map((step, index) => (
+            <div key={index} className="border rounded-md p-3 bg-gray-50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-medium text-gray-800">{step.type.charAt(0).toUpperCase() + step.type.slice(1)}</span>
+                <span className="text-xs text-gray-500">{new Date(step.timestamp).toLocaleTimeString()}</span>
+              </div>
+              <div className="text-sm">
+                {Object.entries(step.details).map(([key, value]) => (
+                  <div key={key} className="mb-1">
+                    <span className="font-medium">{key.charAt(0).toUpperCase() + key.slice(1)}: </span>
+                    {typeof value === 'string' ? (
+                      <span>{value}</span>
+                    ) : Array.isArray(value) ? (
+                      <ul className="list-disc pl-5 mt-1">
+                        {value.map((item, i) => (
+                          <li key={i} className="text-gray-700">
+                            {typeof item === 'string' ? item : JSON.stringify(item)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <pre className="bg-gray-100 p-2 rounded mt-1 text-xs overflow-auto">
+                        {JSON.stringify(value, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Collapsible>
+    </div>
   );
 }
 
-function ComparisonPanel({ 
-  crewai, 
-  autogen, 
-  langgraph 
-}: { 
-  crewai: AgentResponse; 
-  autogen: AgentResponse; 
-  langgraph: AgentResponse; 
-}) {
+function ComparisonPanel({ results }: { results: AgentResults }) {
+  const agentNames = Object.keys(results);
+  
+  const maxResponseTime = Math.max(...agentNames.map(name => results[name as keyof AgentResults]?.response_time || 0));
+  const maxTokenUsage = Math.max(...agentNames.map(name => results[name as keyof AgentResults]?.token_usage || 0));
+  
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        Results Comparison
-      </Typography>
+    <div>
+      <h3 className="text-xl font-semibold mb-4 text-gray-800">
+        Agent Comparison
+      </h3>
       
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={4}>
-          <Paper 
-            variant="outlined" 
-            sx={{ 
-              p: 2, 
-              height: '100%',
-              backgroundColor: '#f5f5f5'
-            }}
-          >
-            <Typography variant="subtitle1" gutterBottom>CrewAI</Typography>
-            <Typography variant="body2">{crewai.result}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={4}>
-          <Paper 
-            variant="outlined" 
-            sx={{ 
-              p: 2, 
-              height: '100%',
-              backgroundColor: '#f5f5f5'
-            }}
-          >
-            <Typography variant="subtitle1" gutterBottom>AutoGen</Typography>
-            <Typography variant="body2">{autogen.result}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={4}>
-          <Paper 
-            variant="outlined" 
-            sx={{ 
-              p: 2, 
-              height: '100%',
-              backgroundColor: '#f5f5f5'
-            }}
-          >
-            <Typography variant="subtitle1" gutterBottom>LangGraph</Typography>
-            <Typography variant="body2">{langgraph.result}</Typography>
-          </Paper>
-        </Grid>
-      </Grid>
+      <Collapsible title="Response Time Comparison" defaultOpen={true}>
+        <div className="space-y-3">
+          {agentNames.map(name => {
+            const agent = results[name as keyof AgentResults]!;
+            const percentage = (agent.response_time / maxResponseTime) * 100;
+            
+            return (
+              <div key={name} className="flex items-center">
+                <div className="w-32 text-sm font-medium text-gray-700">{name.charAt(0).toUpperCase() + name.slice(1)}:</div>
+                <div className="flex-1 h-6 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-600 rounded-full"
+                    style={{ width: `${percentage}%` }}
+                  ></div>
+                </div>
+                <div className="w-20 text-right text-sm ml-2">{agent.response_time.toFixed(2)}s</div>
+              </div>
+            );
+          })}
+        </div>
+      </Collapsible>
       
-      <Typography variant="h6" gutterBottom>
-        Metrics Comparison
-      </Typography>
+      <Collapsible title="Token Usage Comparison" defaultOpen={true}>
+        <div className="space-y-3">
+          {agentNames.map(name => {
+            const agent = results[name as keyof AgentResults]!;
+            const percentage = (agent.token_usage / maxTokenUsage) * 100;
+            
+            return (
+              <div key={name} className="flex items-center">
+                <div className="w-32 text-sm font-medium text-gray-700">{name.charAt(0).toUpperCase() + name.slice(1)}:</div>
+                <div className="flex-1 h-6 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-600 rounded-full"
+                    style={{ width: `${percentage}%` }}
+                  ></div>
+                </div>
+                <div className="w-20 text-right text-sm ml-2">{agent.token_usage.toLocaleString()}</div>
+              </div>
+            );
+          })}
+        </div>
+      </Collapsible>
       
-      <Grid container spacing={2}>
-        <Grid item xs={4}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle2">Time taken (seconds)</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>CrewAI:</Typography>
-              <Box sx={{ 
-                width: `${(crewai.metrics.time_taken / 5) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'primary.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {crewai.metrics.time_taken.toFixed(2)}s
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>AutoGen:</Typography>
-              <Box sx={{ 
-                width: `${(autogen.metrics.time_taken / 5) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'secondary.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {autogen.metrics.time_taken.toFixed(2)}s
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>LangGraph:</Typography>
-              <Box sx={{ 
-                width: `${(langgraph.metrics.time_taken / 5) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'error.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {langgraph.metrics.time_taken.toFixed(2)}s
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={4}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle2">Tokens used</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>CrewAI:</Typography>
-              <Box sx={{ 
-                width: `${(crewai.metrics.tokens_used / 3000) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'primary.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {crewai.metrics.tokens_used}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>AutoGen:</Typography>
-              <Box sx={{ 
-                width: `${(autogen.metrics.tokens_used / 3000) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'secondary.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {autogen.metrics.tokens_used}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>LangGraph:</Typography>
-              <Box sx={{ 
-                width: `${(langgraph.metrics.tokens_used / 3000) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'error.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {langgraph.metrics.tokens_used}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={4}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle2">RAG calls</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>CrewAI:</Typography>
-              <Box sx={{ 
-                width: `${(crewai.metrics.rag_calls / 5) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'primary.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {crewai.metrics.rag_calls}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>AutoGen:</Typography>
-              <Box sx={{ 
-                width: `${(autogen.metrics.rag_calls / 5) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'secondary.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {autogen.metrics.rag_calls}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-              <Typography variant="body2" sx={{ minWidth: 100 }}>LangGraph:</Typography>
-              <Box sx={{ 
-                width: `${(langgraph.metrics.rag_calls / 5) * 100}%`, 
-                maxWidth: '100%',
-                height: 20, 
-                backgroundColor: 'error.main',
-                borderRadius: 1
-              }} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {langgraph.metrics.rag_calls}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+      <Collapsible title="Output Comparison" defaultOpen={true}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {agentNames.map(name => {
+            const agent = results[name as keyof AgentResults]!;
+            
+            return (
+              <div key={name} className="border rounded-md p-4 bg-gray-50">
+                <h4 className="font-medium mb-2 text-gray-800">{name.charAt(0).toUpperCase() + name.slice(1)}</h4>
+                <p className="text-sm text-gray-700">{agent.final_output}</p>
+              </div>
+            );
+          })}
+        </div>
+      </Collapsible>
+    </div>
   );
 }
 
