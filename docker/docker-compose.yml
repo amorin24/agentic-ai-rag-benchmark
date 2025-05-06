@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  rag-service:
+    build:
+      context: ..
+      dockerfile: docker/rag_service.Dockerfile
+    ports:
+      - "${RAG_SERVICE_PORT:-8000}:8000"
+    volumes:
+      - ../data:/app/data
+      - ../logs:/app/logs
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  crewai-agent:
+    build:
+      context: ..
+      dockerfile: docker/crewai_agent.Dockerfile
+    depends_on:
+      rag-service:
+        condition: service_healthy
+    volumes:
+      - ../data:/app/data
+      - ../logs:/app/logs
+    env_file:
+      - ../.env
+
+  autogen-agent:
+    build:
+      context: ..
+      dockerfile: docker/autogen_agent.Dockerfile
+    depends_on:
+      rag-service:
+        condition: service_healthy
+    volumes:
+      - ../data:/app/data
+      - ../logs:/app/logs
+    env_file:
+      - ../.env
+
+  langgraph-agent:
+    build:
+      context: ..
+      dockerfile: docker/langgraph_agent.Dockerfile
+    depends_on:
+      rag-service:
+        condition: service_healthy
+    volumes:
+      - ../data:/app/data
+      - ../logs:/app/logs
+    env_file:
+      - ../.env
+
+  ui:
+    build:
+      context: ..
+      dockerfile: docker/ui.Dockerfile
+    ports:
+      - "${UI_PORT:-3000}:3000"
+    depends_on:
+      - rag-service
+      - crewai-agent
+      - autogen-agent
+      - langgraph-agent
+    env_file:
+      - ../.env
