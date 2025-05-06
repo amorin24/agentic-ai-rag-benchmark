@@ -1,0 +1,25 @@
+# Agent Frameworks
+
+This section provides detailed architecture diagrams and explanations for each agent framework implemented in the Agentic AI RAG Benchmark project.
+
+## Supported Frameworks
+
+The project currently supports the following agent frameworks:
+
+- [CrewAI](./crewai.md): A framework for creating multi-agent systems with specialized roles
+- [AutoGen](./autogen.md): A framework for building conversational agents with LLMs
+- [LangGraph](./langgraph.md): A framework for building graph-based workflows with LLMs
+- [Google ADK](./googleadk.md): Google's Agent Development Kit for building AI agents
+- [SquidAI](./squidai.md): A framework for building tool-using agents
+- [LettaAI](./lettaai.md): A framework for building memory-augmented agents
+
+## Common Architecture
+
+All agent frameworks share a common architecture pattern:
+
+1. **Base Agent Runner**: All frameworks extend the `AgentRunner` abstract base class
+2. **RAG Integration**: All frameworks use the RAG service to retrieve relevant information
+3. **Logging**: All frameworks log execution steps, metrics, and outputs
+4. **Output Format**: All frameworks return outputs in a standardized format
+
+For details on the specific architecture of each framework, see the corresponding documentation.
