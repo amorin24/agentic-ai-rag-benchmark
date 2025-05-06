@@ -26,6 +26,10 @@ PROCESSED_DIR = Path(os.getenv('PROCESSED_DOCS_DIR', 'data/processed'))
 CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '1000'))
 CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', '200'))
 FMP_API_KEY = os.getenv('FMP_API_KEY', '')  # Financial Modeling Prep API key
+WIKIPEDIA_MAX_ARTICLES = int(os.getenv('WIKIPEDIA_MAX_ARTICLES', '5'))
+WIKIPEDIA_LANGUAGE = os.getenv('WIKIPEDIA_LANGUAGE', 'en')
+
+wikipedia.set_lang(WIKIPEDIA_LANGUAGE)
 
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -197,23 +201,25 @@ def ingest_from_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> st
     return save_processed_document(doc_id, chunks, metadata)
 
 
-def ingest_from_wikipedia(topic: str, max_articles: int = 5) -> List[str]:
+def ingest_from_wikipedia(topic: str, max_articles: int = WIKIPEDIA_MAX_ARTICLES) -> List[str]:
     """
     Ingest content from Wikipedia.
     
     Args:
         topic: Topic to search for
-        max_articles: Maximum number of articles to ingest
+        max_articles: Maximum number of articles to ingest (defaults to WIKIPEDIA_MAX_ARTICLES from env)
         
     Returns:
         List of paths to processed documents
     """
     try:
+        logger.info(f"Searching Wikipedia for '{topic}' (max articles: {max_articles})")
         search_results = wikipedia.search(topic, results=max_articles)
         
         processed_docs = []
         for title in search_results:
             try:
+                logger.info(f"Retrieving Wikipedia article: {title}")
                 page = wikipedia.page(title)
                 
                 text = clean_text(page.content)
@@ -226,16 +232,52 @@ def ingest_from_wikipedia(topic: str, max_articles: int = 5) -> List[str]:
                     "source": "wikipedia",
                     "title": title,
                     "url": page.url,
-                    "type": "wikipedia"
+                    "type": "wikipedia",
+                    "language": WIKIPEDIA_LANGUAGE
                 }
                 
                 file_path = save_processed_document(doc_id, chunks, metadata)
                 processed_docs.append(file_path)
+                logger.info(f"Successfully processed Wikipedia article: {title}")
                 
+            except wikipedia.exceptions.DisambiguationError as e:
+                logger.warning(f"Disambiguation error for '{title}': {str(e)}")
+                if e.options:
+                    try:
+                        alt_title = e.options[0]
+                        logger.info(f"Trying alternative: {alt_title}")
+                        page = wikipedia.page(alt_title)
+                        
+                        text = clean_text(page.content)
+                        
+                        doc_id = f"wiki_{hash(alt_title)}_{int(time.time())}"
+                        
+                        chunks = chunk_text(text)
+                        
+                        metadata = {
+                            "source": "wikipedia",
+                            "title": alt_title,
+                            "original_query": title,
+                            "url": page.url,
+                            "type": "wikipedia",
+                            "language": WIKIPEDIA_LANGUAGE
+                        }
+                        
+                        file_path = save_processed_document(doc_id, chunks, metadata)
+                        processed_docs.append(file_path)
+                        logger.info(f"Successfully processed alternative Wikipedia article: {alt_title}")
+                    except Exception as inner_e:
+                        logger.error(f"Failed to process alternative Wikipedia article {alt_title}: {str(inner_e)}")
+                continue
             except Exception as e:
                 logger.error(f"Failed to process Wikipedia article {title}: {str(e)}")
                 continue
         
+        if not processed_docs:
+            logger.warning(f"No Wikipedia articles were successfully processed for topic: {topic}")
+        else:
+            logger.info(f"Successfully processed {len(processed_docs)} Wikipedia articles for topic: {topic}")
+            
         return processed_docs
     
     except Exception as e:
