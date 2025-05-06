@@ -15,6 +15,7 @@ from typing import List, Dict, Any, Optional, Union
 from pathlib import Path
 from bs4 import BeautifulSoup
 import wikipedia
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -28,6 +29,9 @@ CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', '200'))
 FMP_API_KEY = os.getenv('FMP_API_KEY', '')  # Financial Modeling Prep API key
 WIKIPEDIA_MAX_ARTICLES = int(os.getenv('WIKIPEDIA_MAX_ARTICLES', '5'))
 WIKIPEDIA_LANGUAGE = os.getenv('WIKIPEDIA_LANGUAGE', 'en')
+NEWS_API_KEY = os.getenv('NEWS_API_KEY', '')  # NewsAPI key
+NEWS_API_MAX_ARTICLES = int(os.getenv('NEWS_API_MAX_ARTICLES', '10'))
+NEWS_API_SORT_BY = os.getenv('NEWS_API_SORT_BY', 'relevancy')  # Options: relevancy, popularity, publishedAt
 
 wikipedia.set_lang(WIKIPEDIA_LANGUAGE)
 
@@ -427,10 +431,126 @@ def list_processed_documents() -> List[Dict[str, Any]]:
     return documents
 
 
+def ingest_from_news_api(topic: str, max_articles: int = NEWS_API_MAX_ARTICLES, 
+                      sort_by: str = NEWS_API_SORT_BY, days_back: int = 30) -> List[str]:
+    """
+    Ingest news articles from NewsAPI.
+    
+    Args:
+        topic: Topic to search for
+        max_articles: Maximum number of articles to ingest (defaults to NEWS_API_MAX_ARTICLES from env)
+        sort_by: Sorting method (relevancy, popularity, publishedAt)
+        days_back: Number of days to look back for articles
+        
+    Returns:
+        List of paths to processed documents
+    """
+    if not NEWS_API_KEY:
+        raise ValueError("NewsAPI key not found in environment variables")
+    
+    try:
+        logger.info(f"Searching NewsAPI for '{topic}' (max articles: {max_articles}, sort: {sort_by})")
+        
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        
+        from_date = start_date.strftime('%Y-%m-%d')
+        to_date = end_date.strftime('%Y-%m-%d')
+        
+        url = "https://newsapi.org/v2/everything"
+        params = {
+            "q": topic,
+            "apiKey": NEWS_API_KEY,
+            "sortBy": sort_by,
+            "language": "en",
+            "from": from_date,
+            "to": to_date,
+            "pageSize": max_articles
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if data.get("status") != "ok":
+            logger.error(f"NewsAPI returned error: {data.get('message', 'Unknown error')}")
+            raise ValueError(f"NewsAPI error: {data.get('message', 'Unknown error')}")
+        
+        articles = data.get("articles", [])
+        logger.info(f"Found {len(articles)} articles about '{topic}'")
+        
+        processed_docs = []
+        for article in articles:
+            try:
+                title = article.get("title", "Untitled")
+                source = article.get("source", {}).get("name", "Unknown Source")
+                author = article.get("author", "Unknown Author")
+                published_at = article.get("publishedAt", "")
+                url = article.get("url", "")
+                description = article.get("description", "")
+                content = article.get("content", "")
+                
+                if not content or "..." in content or "[+" in content:
+                    logger.info(f"Content truncated or empty, fetching from URL: {url}")
+                    try:
+                        article_data = extract_text_from_url(url)
+                        content = article_data.get("text", "")
+                    except Exception as e:
+                        logger.warning(f"Failed to extract text from URL {url}: {str(e)}")
+                        content = description
+                
+                full_text = f"Title: {title}\n\n"
+                full_text += f"Source: {source}\n"
+                full_text += f"Author: {author}\n"
+                full_text += f"Published: {published_at}\n\n"
+                full_text += f"Description: {description}\n\n"
+                full_text += f"Content:\n{content}"
+                
+                text = clean_text(full_text)
+                
+                doc_id = f"news_{hash(title)}_{int(time.time())}"
+                
+                chunks = chunk_text(text)
+                
+                metadata = {
+                    "source": "newsapi",
+                    "title": title,
+                    "url": url,
+                    "author": author,
+                    "published_at": published_at,
+                    "source_name": source,
+                    "type": "news"
+                }
+                
+                file_path = save_processed_document(doc_id, chunks, metadata)
+                processed_docs.append(file_path)
+                logger.info(f"Successfully processed news article: {title}")
+                
+            except Exception as e:
+                logger.error(f"Failed to process news article: {str(e)}")
+                continue
+        
+        if not processed_docs:
+            logger.warning(f"No news articles were successfully processed for topic: {topic}")
+        else:
+            logger.info(f"Successfully processed {len(processed_docs)} news articles for topic: {topic}")
+            
+        return processed_docs
+    
+    except Exception as e:
+        logger.error(f"Failed to search NewsAPI for {topic}: {str(e)}")
+        raise
+
+
 if __name__ == "__main__":
     print("Ingesting from Wikipedia...")
     wiki_docs = ingest_from_wikipedia("Artificial Intelligence", max_articles=2)
     print(f"Processed {len(wiki_docs)} Wikipedia articles")
+    
+    print("\nIngesting from NewsAPI...")
+    news_docs = ingest_from_news_api("Artificial Intelligence", max_articles=2)
+    print(f"Processed {len(news_docs)} news articles")
     
     print("\nListing processed documents:")
     docs = list_processed_documents()
