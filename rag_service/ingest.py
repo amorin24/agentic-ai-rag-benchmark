@@ -18,6 +18,9 @@ import wikipedia
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
+from external.news_api import fetch_news
+from external.fmp_api import fetch_financials
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -543,14 +546,198 @@ def ingest_from_news_api(topic: str, max_articles: int = NEWS_API_MAX_ARTICLES,
         raise
 
 
+def ingest_news_topic(topic: str, max_articles: int = NEWS_API_MAX_ARTICLES) -> List[str]:
+    """
+    Ingest news articles about a topic using the external news_api module.
+    
+    Args:
+        topic: Topic to search for
+        max_articles: Maximum number of articles to ingest
+        
+    Returns:
+        List of paths to processed documents
+    """
+    logger.info(f"Ingesting news articles about '{topic}' using external news_api module")
+    
+    try:
+        articles = fetch_news(topic, max_articles=max_articles)
+        
+        if not articles:
+            logger.warning(f"No news articles found for topic: {topic}")
+            return []
+        
+        logger.info(f"Found {len(articles)} news articles about '{topic}'")
+        
+        processed_docs = []
+        for article in articles:
+            try:
+                title = article.get("title", "Untitled")
+                source = article.get("source", "Unknown Source")
+                author = article.get("author", "Unknown Author")
+                published_at = article.get("published_at", "")
+                url = article.get("url", "")
+                description = article.get("description", "")
+                content = article.get("content", "")
+                
+                full_text = f"Title: {title}\n\n"
+                full_text += f"Source: {source}\n"
+                full_text += f"Author: {author}\n"
+                full_text += f"Published: {published_at}\n\n"
+                full_text += f"Description: {description}\n\n"
+                full_text += f"Content:\n{content}"
+                
+                text = clean_text(full_text)
+                
+                doc_id = f"news_{hash(title)}_{int(time.time())}"
+                
+                chunks = chunk_text(text)
+                
+                metadata = {
+                    "source": "newsapi_external",
+                    "title": title,
+                    "url": url,
+                    "author": author,
+                    "published_at": published_at,
+                    "source_name": source,
+                    "type": "news",
+                    "topic": topic
+                }
+                
+                file_path = save_processed_document(doc_id, chunks, metadata)
+                processed_docs.append(file_path)
+                logger.info(f"Successfully processed news article: {title}")
+                
+            except Exception as e:
+                logger.error(f"Failed to process news article: {str(e)}")
+                continue
+        
+        if not processed_docs:
+            logger.warning(f"No news articles were successfully processed for topic: {topic}")
+        else:
+            logger.info(f"Successfully processed {len(processed_docs)} news articles for topic: {topic}")
+            
+        return processed_docs
+        
+    except Exception as e:
+        logger.error(f"Failed to ingest news for topic '{topic}': {str(e)}")
+        return []
+
+
+def ingest_financial_data(ticker: str) -> str:
+    """
+    Ingest financial data for a company using the external fmp_api module.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL, MSFT)
+        
+    Returns:
+        Path to the processed document
+    """
+    logger.info(f"Ingesting financial data for '{ticker}' using external fmp_api module")
+    
+    try:
+        financial_data = fetch_financials(ticker)
+        
+        if not financial_data:
+            logger.warning(f"No financial data found for ticker: {ticker}")
+            return ""
+        
+        company_profile = financial_data.get("company_profile", {})
+        company_name = company_profile.get("companyName", ticker)
+        description = company_profile.get("description", "")
+        sector = company_profile.get("sector", "")
+        industry = company_profile.get("industry", "")
+        
+        income_statements = financial_data.get("income_statement", [])
+        balance_sheets = financial_data.get("balance_sheet", [])
+        cash_flows = financial_data.get("cash_flow", [])
+        key_metrics = financial_data.get("key_metrics", [])
+        stock_price = financial_data.get("stock_price", {})
+        news = financial_data.get("news", [])
+        
+        text = f"Company: {company_name}\n"
+        text += f"Symbol: {ticker}\n"
+        text += f"Sector: {sector}\n"
+        text += f"Industry: {industry}\n\n"
+        text += f"Description: {description}\n\n"
+        
+        text += "Current Stock Information:\n"
+        text += f"Price: ${stock_price.get('price', 'N/A')}\n"
+        text += f"Change: {stock_price.get('change', 'N/A')} ({stock_price.get('changesPercentage', 'N/A')}%)\n"
+        text += f"Market Cap: ${stock_price.get('marketCap', 'N/A')}\n"
+        text += f"Volume: {stock_price.get('volume', 'N/A')}\n\n"
+        
+        text += "Income Statement Data:\n"
+        for i, statement in enumerate(income_statements[:2]):
+            year = statement.get("date", "N/A")
+            text += f"Year {i+1} ({year}):\n"
+            text += f"  Revenue: ${statement.get('revenue', 0):,}\n"
+            text += f"  Gross Profit: ${statement.get('grossProfit', 0):,}\n"
+            text += f"  Operating Income: ${statement.get('operatingIncome', 0):,}\n"
+            text += f"  Net Income: ${statement.get('netIncome', 0):,}\n"
+            text += f"  EPS: ${statement.get('eps', 0)}\n\n"
+        
+        text += "Balance Sheet Data:\n"
+        for i, sheet in enumerate(balance_sheets[:2]):
+            year = sheet.get("date", "N/A")
+            text += f"Year {i+1} ({year}):\n"
+            text += f"  Total Assets: ${sheet.get('totalAssets', 0):,}\n"
+            text += f"  Total Liabilities: ${sheet.get('totalLiabilities', 0):,}\n"
+            text += f"  Total Equity: ${sheet.get('totalStockholdersEquity', 0):,}\n\n"
+        
+        text += "Key Financial Metrics:\n"
+        for i, metrics in enumerate(key_metrics[:2]):
+            year = metrics.get("date", "N/A")
+            text += f"Year {i+1} ({year}):\n"
+            text += f"  ROE: {metrics.get('roe', 'N/A')}\n"
+            text += f"  ROA: {metrics.get('roa', 'N/A')}\n"
+            text += f"  Debt to Equity: {metrics.get('debtToEquity', 'N/A')}\n"
+            text += f"  Current Ratio: {metrics.get('currentRatio', 'N/A')}\n\n"
+        
+        text += "Recent News:\n"
+        for i, article in enumerate(news[:3]):
+            text += f"News {i+1}: {article.get('title', 'N/A')}\n"
+            text += f"Date: {article.get('publishedDate', 'N/A')}\n"
+            text += f"Source: {article.get('site', 'N/A')}\n"
+            text += f"Summary: {article.get('text', 'N/A')[:200]}...\n\n"
+        
+        text = clean_text(text)
+        
+        doc_id = f"financial_{ticker}_{int(time.time())}"
+        
+        chunks = chunk_text(text)
+        
+        metadata = {
+            "source": "financial_modeling_prep_external",
+            "ticker": ticker,
+            "company_name": company_name,
+            "sector": sector,
+            "industry": industry,
+            "type": "financial"
+        }
+        
+        file_path = save_processed_document(doc_id, chunks, metadata)
+        logger.info(f"Successfully processed financial data for {ticker}")
+        
+        return file_path
+        
+    except Exception as e:
+        logger.error(f"Failed to ingest financial data for {ticker}: {str(e)}")
+        return ""
+
+
 if __name__ == "__main__":
     print("Ingesting from Wikipedia...")
     wiki_docs = ingest_from_wikipedia("Artificial Intelligence", max_articles=2)
     print(f"Processed {len(wiki_docs)} Wikipedia articles")
     
     print("\nIngesting from NewsAPI...")
-    news_docs = ingest_from_news_api("Artificial Intelligence", max_articles=2)
+    news_docs = ingest_news_topic("Artificial Intelligence", max_articles=2)
     print(f"Processed {len(news_docs)} news articles")
+    
+    print("\nIngesting financial data...")
+    financial_doc = ingest_financial_data("AAPL")
+    print(f"Processed financial data: {financial_doc}")
     
     print("\nListing processed documents:")
     docs = list_processed_documents()
