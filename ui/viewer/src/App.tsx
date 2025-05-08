@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 interface AgentStep {
@@ -69,11 +69,41 @@ function Collapsible({ title, children, defaultOpen = false }: CollapsibleProps)
   );
 }
 
+const agentRunnerApi = {
+  baseUrl: process.env.REACT_APP_AGENT_RUNNER_URL || 'http://localhost:8001',
+  
+  async runAgent(agentName: string, topic: string): Promise<AgentResponse> {
+    try {
+      const response = await axios.post(`${this.baseUrl}/run`, {
+        agent: agentName,
+        topic: topic
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error(`Error running ${agentName} agent:`, error);
+      throw error;
+    }
+  },
+  
+  async getAvailableAgents(): Promise<string[]> {
+    try {
+      const response = await axios.get(`${this.baseUrl}/frameworks`);
+      return response.data.frameworks || [];
+    } catch (error) {
+      console.error('Error fetching available agents:', error);
+      return ['crewai', 'autogen', 'langgraph', 'googleadk', 'squidai', 'lettaai'];
+    }
+  }
+};
+
 function App() {
   const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [results, setResults] = useState<AgentResults>({});
+  const [availableAgents, setAvailableAgents] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const companyOptions = [
     'Apple Inc.',
@@ -84,6 +114,20 @@ function App() {
     'Google LLC',
   ];
 
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const agents = await agentRunnerApi.getAvailableAgents();
+        setAvailableAgents(agents);
+      } catch (error) {
+        console.error('Failed to fetch available agents:', error);
+        setError('Failed to connect to agent runner service. Using default frameworks.');
+      }
+    };
+    
+    fetchAgents();
+  }, []);
+
   const handleTabChange = (newValue: number) => {
     setTabValue(newValue);
   };
@@ -92,106 +136,51 @@ function App() {
     if (!company) return;
     
     setLoading(true);
+    setError(null);
     
     try {
+      const agents = availableAgents.length > 0 ? availableAgents : 
+        ['crewai', 'autogen', 'langgraph', 'googleadk', 'squidai', 'lettaai'];
       
-      const crewaiPromise = simulateAgentRun('crewai', company);
-      const autogenPromise = simulateAgentRun('autogen', company);
-      const langgraphPromise = simulateAgentRun('langgraph', company);
-      const googleadkPromise = simulateAgentRun('googleadk', company);
-      const squidaiPromise = simulateAgentRun('squidai', company);
-      const lettaaiPromise = simulateAgentRun('lettaai', company);
+      const agentPromises = agents.map(agent => runAgent(agent, company));
+      const agentResults = await Promise.all(agentPromises);
       
-      const [crewai, autogen, langgraph, googleadk, squidai, lettaai] = await Promise.all([
-        crewaiPromise,
-        autogenPromise,
-        langgraphPromise,
-        googleadkPromise,
-        squidaiPromise,
-        lettaaiPromise
-      ]);
-      
-      setResults({
-        crewai,
-        autogen,
-        langgraph,
-        googleadk,
-        squidai,
-        lettaai
+      const resultsObject: AgentResults = {};
+      agents.forEach((agent, index) => {
+        resultsObject[agent as keyof AgentResults] = agentResults[index];
       });
+      
+      setResults(resultsObject);
     } catch (error) {
       console.error('Error running agents:', error);
+      setError('Failed to run one or more agents. Check console for details.');
     } finally {
       setLoading(false);
     }
   };
 
-  const simulateAgentRun = (agentName: string, company: string): Promise<AgentResponse> => {
-    const timings: Record<string, number> = {
-      crewai: 2300,
-      autogen: 2800,
-      langgraph: 3500,
-      googleadk: 3000,
-      squidai: 2600,
-      lettaai: 3200
-    };
-    
-    const tokenUsage: Record<string, number> = {
-      crewai: 1500,
-      autogen: 1800,
-      langgraph: 2200,
-      googleadk: 1900,
-      squidai: 1600,
-      lettaai: 2000
-    };
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          agent_name: agentName,
-          final_output: `${agentName.charAt(0).toUpperCase() + agentName.slice(1)} analysis for ${company}: This company has shown strong performance in recent quarters with innovative product launches and strategic partnerships. Market position remains competitive with opportunities for growth in emerging markets.`,
-          steps: [
-            {
-              type: 'planning',
-              timestamp: new Date().toISOString(),
-              details: {
-                thought: `Planning research approach for ${company}`,
-                plan: [
-                  `1. Gather general information about ${company}`,
-                  `2. Collect recent news and press releases`,
-                  `3. Research product portfolio and market position`,
-                  `4. Examine financial performance and trends`,
-                  `5. Analyze collected information and generate a report`
-                ]
-              }
-            },
-            {
-              type: 'rag_query',
-              timestamp: new Date().toISOString(),
-              details: {
-                query: `${company} company overview`,
-                results: [
-                  {
-                    text: `${company} is a leading organization in its industry, known for innovation and market leadership.`,
-                    score: 0.92
-                  }
-                ]
-              }
-            },
-            {
-              type: 'analysis',
-              timestamp: new Date().toISOString(),
-              details: {
-                thought: `Analyzing company profile of ${company}`,
-                insights: "Company has established a strong market position with significant industry presence."
-              }
+  const runAgent = async (agentName: string, topic: string): Promise<AgentResponse> => {
+    try {
+      return await agentRunnerApi.runAgent(agentName, topic);
+    } catch (error) {
+      console.error(`Error running ${agentName} agent:`, error);
+      
+      return {
+        agent_name: agentName,
+        final_output: `Error running ${agentName} agent. Please check the agent runner service.`,
+        steps: [
+          {
+            type: 'error',
+            timestamp: new Date().toISOString(),
+            details: {
+              error: `Failed to connect to ${agentName} agent runner`
             }
-          ],
-          token_usage: tokenUsage[agentName],
-          response_time: timings[agentName] / 1000
-        });
-      }, timings[agentName]);
-    });
+          }
+        ],
+        token_usage: 0,
+        response_time: 0
+      };
+    }
   };
 
   const getAgentNames = (): string[] => {
