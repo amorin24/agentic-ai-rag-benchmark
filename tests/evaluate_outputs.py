@@ -1,8 +1,9 @@
 """
-Evaluation script for comparing agent framework outputs.
+Optimized evaluation script for comparing agent framework outputs.
 
 This script runs all agent runners with the same input (company name),
-collects their outputs, and evaluates them on multiple metrics.
+collects their outputs, and evaluates them on multiple metrics using
+more cost-effective approaches than the original script.
 """
 
 import os
@@ -18,7 +19,11 @@ from datetime import datetime
 import importlib.util
 import numpy as np
 from dotenv import load_dotenv
-import openai
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import nltk
+from nltk.tokenize import sent_tokenize
+from nltk.sentiment import SentimentIntensityAnalyzer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -34,11 +39,21 @@ from agents.lettaai.runner import LettaAIRunner
 
 load_dotenv()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
+
+try:
+    nltk.data.find('sentiment/vader_lexicon.zip')
+except LookupError:
+    nltk.download('vader_lexicon')
+
 
 class AgentEvaluator:
     """
-    Evaluates and compares outputs from different agent frameworks.
+    Evaluates and compares outputs from different agent frameworks
+    using cost-effective local metrics.
     """
     
     def __init__(self, rag_service_url: str, output_format: str = "json"):
@@ -52,6 +67,8 @@ class AgentEvaluator:
         self.rag_service_url = rag_service_url
         self.output_format = output_format
         self.agent_runners = self._initialize_agent_runners()
+        self.vectorizer = TfidfVectorizer(stop_words='english')
+        self.sentiment_analyzer = SentimentIntensityAnalyzer()
         
     def _initialize_agent_runners(self) -> Dict[str, Any]:
         """
@@ -143,7 +160,7 @@ class AgentEvaluator:
     
     def _evaluate_factual_overlap(self, output: str, rag_context: List[Dict[str, Any]]) -> float:
         """
-        Evaluate factual overlap with RAG context.
+        Evaluate factual overlap with RAG context using TF-IDF and cosine similarity.
         
         Args:
             output: Agent output text
@@ -158,22 +175,10 @@ class AgentEvaluator:
         try:
             context_text = " ".join([doc.get("chunk", "") for doc in rag_context])
             
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are an evaluation assistant. Your task is to evaluate the factual overlap between an agent's output and the RAG context provided. Score from 0 to 1, where 0 means no overlap and 1 means perfect overlap."},
-                    {"role": "user", "content": f"RAG Context:\n{context_text}\n\nAgent Output:\n{output}\n\nEvaluate the factual overlap between the agent output and the RAG context. Return only a number between 0 and 1."}
-                ],
-                max_tokens=10
-            )
+            tfidf_matrix = self.vectorizer.fit_transform([context_text, output])
+            similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
             
-            score_text = response.choices[0].message.content.strip()
-            try:
-                score = float(score_text)
-                return min(max(score, 0.0), 1.0)  # Ensure score is between 0 and 1
-            except ValueError:
-                logger.warning(f"Could not parse factual overlap score: {score_text}")
-                return 0.5  # Default to middle score if parsing fails
+            return max(0.0, min(1.0, similarity))
                 
         except Exception as e:
             logger.error(f"Error evaluating factual overlap: {str(e)}")
@@ -181,7 +186,10 @@ class AgentEvaluator:
     
     def _evaluate_reasoning_clarity(self, output: str, steps: List[Dict[str, Any]]) -> float:
         """
-        Evaluate reasoning clarity.
+        Evaluate reasoning clarity using local metrics:
+        1. Structure: Number of steps relative to average
+        2. Coherence: Sentiment consistency across steps
+        3. Detail: Length of explanations relative to average
         
         Args:
             output: Agent output text
@@ -191,24 +199,37 @@ class AgentEvaluator:
             Reasoning clarity score (0-1)
         """
         try:
-            steps_text = json.dumps(steps, indent=2)
+            step_count = len(steps)
+            avg_step_count = 5  # Expected average number of steps
+            structure_score = min(1.0, step_count / avg_step_count)
             
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are an evaluation assistant. Your task is to evaluate the clarity of reasoning in an agent's output and execution steps. Score from 0 to 1, where 0 means unclear reasoning and 1 means perfectly clear reasoning."},
-                    {"role": "user", "content": f"Agent Output:\n{output}\n\nExecution Steps:\n{steps_text}\n\nEvaluate the clarity of reasoning. Return only a number between 0 and 1."}
-                ],
-                max_tokens=10
+            sentiments = []
+            for step in steps:
+                step_text = json.dumps(step)
+                sentiment = self.sentiment_analyzer.polarity_scores(step_text)
+                sentiments.append(sentiment['compound'])
+            
+            sentiment_variance = np.var(sentiments) if sentiments else 1.0
+            coherence_score = max(0.0, 1.0 - sentiment_variance)
+            
+            step_lengths = [len(json.dumps(step)) for step in steps]
+            avg_length = sum(step_lengths) / len(step_lengths) if step_lengths else 0
+            expected_avg_length = 200  # Expected average step length
+            detail_score = min(1.0, avg_length / expected_avg_length)
+            
+            weights = {
+                "structure": 0.3,
+                "coherence": 0.3,
+                "detail": 0.4
+            }
+            
+            final_score = (
+                weights["structure"] * structure_score +
+                weights["coherence"] * coherence_score +
+                weights["detail"] * detail_score
             )
             
-            score_text = response.choices[0].message.content.strip()
-            try:
-                score = float(score_text)
-                return min(max(score, 0.0), 1.0)  # Ensure score is between 0 and 1
-            except ValueError:
-                logger.warning(f"Could not parse reasoning clarity score: {score_text}")
-                return 0.5  # Default to middle score if parsing fails
+            return max(0.0, min(1.0, final_score))
                 
         except Exception as e:
             logger.error(f"Error evaluating reasoning clarity: {str(e)}")
@@ -259,7 +280,8 @@ class AgentEvaluator:
         
         serializable_results["metadata"] = {
             "timestamp": datetime.now().isoformat(),
-            "format_version": "1.0"
+            "format_version": "1.0",
+            "evaluation_method": "local_metrics"
         }
         
         with open(output_path, "w") as f:
