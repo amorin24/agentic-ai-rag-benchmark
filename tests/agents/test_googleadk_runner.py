@@ -86,11 +86,11 @@ class TestGoogleADKRunner:
                 
                 assert mock_add_step.called
                 args, _ = mock_add_step.call_args
-                assert args[0] == "research_planning"
+                assert args[0] == "planning"
                 assert "Test Company" in str(args[1])
     
-    def test_simulate_research_execution(self, googleadk_runner):
-        """Test _simulate_research_execution method."""
+    def test_simulate_analysis(self, googleadk_runner):
+        """Test _simulate_analysis method."""
         with patch('time.sleep'):
             with patch.object(googleadk_runner, '_add_step') as mock_add_step:
                 company_info = [{"text": "Test company info"}]
@@ -98,7 +98,7 @@ class TestGoogleADKRunner:
                 product_info = [{"text": "Test products"}]
                 financial_info = [{"text": "Test financials"}]
                 
-                googleadk_runner._simulate_research_execution(
+                googleadk_runner._simulate_analysis(
                     "Test Company", 
                     company_info, 
                     news_info, 
