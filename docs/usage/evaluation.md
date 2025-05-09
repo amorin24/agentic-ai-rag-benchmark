@@ -76,11 +76,13 @@ A lower response time indicates faster execution.
 
 ### Reasoning Clarity
 
-This metric evaluates the clarity and coherence of the agent's reasoning process. It is calculated using an LLM-based scoring system that assesses:
+This metric evaluates the clarity and coherence of the agent's reasoning process. It is calculated using a combination of NLP techniques including:
 
-- Logical flow: How well the reasoning follows a logical progression
-- Explainability: How well the agent explains its decisions
-- Coherence: How well the reasoning holds together as a whole
+- Sentiment analysis: Evaluating the confidence and clarity of statements
+- Coherence metrics: Measuring the logical flow between sentences
+- Readability scores: Assessing the clarity of expression
+
+This approach provides a cost-effective alternative to LLM-based scoring while maintaining robust evaluation capabilities.
 
 A higher reasoning clarity score indicates clearer and more coherent reasoning.
 
