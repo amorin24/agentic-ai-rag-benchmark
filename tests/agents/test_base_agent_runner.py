@@ -56,7 +56,7 @@ class TestBaseAgentRunner:
         
         assert result["agent_name"] == "test_agent"
         assert result["final_output"] == "Test output for test_topic"
-        assert len(result["steps"]) == 3  # task_start, test_step, task_complete
+        assert len(result["steps"]) == 4  # task_start, test_step, final_output, task_complete
         assert result["token_usage"] == 100
         assert isinstance(result["response_time"], float)
     

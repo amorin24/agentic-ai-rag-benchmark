@@ -1,4 +1,5 @@
 import pytest
+import faiss
 from fastapi.testclient import TestClient
 from rag_service.app.api import app
 
@@ -65,6 +66,11 @@ def test_query_endpoint():
 def test_query_empty_store():
     """Test querying an empty vector store."""
     from rag_service.app.api import app as fresh_app
+    import rag_service.app.api as api_module
+    api_module.chunks = []
+    api_module.metadata = []
+    api_module.index = faiss.IndexFlatL2(api_module.embedding_size)
+    
     fresh_client = TestClient(fresh_app)
     
     response = fresh_client.get("/query?q=test%20query")
