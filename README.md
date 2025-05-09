@@ -137,7 +137,7 @@ This setup runs each agent framework as a separate service:
 
 3. View logs for a specific service:
    ```bash
-   docker-compose -f docker/docker-compose.yml logs -f crewai_agent
+   docker-compose -f docker/docker-compose.yml logs -f crewai-agent
    ```
 
 4. Stop all services:
@@ -233,7 +233,7 @@ The RAG service provides three main endpoints:
 
 3. **Check service status**:
    ```bash
-   curl -X GET http://localhost:8000/status
+   curl -X GET http://localhost:8000/health
    ```
 
 ### Agent Runners
