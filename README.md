@@ -233,7 +233,7 @@ The RAG service provides three main endpoints:
 
 3. **Check service status**:
    ```bash
-   curl -X GET http://localhost:8000/health
+   curl -X GET http://localhost:8000/status
    ```
 
 ### Agent Runners
