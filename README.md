@@ -99,7 +99,14 @@ This setup runs the RAG service, a configurable agent runner, and the UI:
 
 1. Start all services:
    ```bash
+   # Standard method
    docker-compose up -d
+   
+   # If environment variables aren't loading properly
+   ./docker-compose-with-env.sh up -d
+   
+   # Or explicitly specify the env file
+   docker-compose --env-file=./.env up -d
    ```
 
 2. Access the services:
@@ -108,7 +115,11 @@ This setup runs the RAG service, a configurable agent runner, and the UI:
 
 3. Run with a specific agent framework:
    ```bash
+   # Standard method
    AGENT_FRAMEWORK=autogen docker-compose up agent_runner
+   
+   # If environment variables aren't loading properly
+   AGENT_FRAMEWORK=autogen ./docker-compose-with-env.sh up agent_runner
    ```
 
 4. View logs:
@@ -119,6 +130,25 @@ This setup runs the RAG service, a configurable agent runner, and the UI:
 5. Stop all services:
    ```bash
    docker-compose down
+   ```
+
+### Troubleshooting Docker Environment Variables
+
+If you encounter issues with Docker not reading environment variables from your .env file:
+
+1. Run the troubleshooting script:
+   ```bash
+   ./docker-env-fix.sh
+   ```
+
+2. Make sure your .env file:
+   - Is in the root directory of the project
+   - Has proper permissions (chmod 600 .env)
+   - Has no spaces around the = sign (use KEY=value format)
+
+3. Try using the wrapper script:
+   ```bash
+   ./docker-compose-with-env.sh up -d
    ```
 
 ### Option 2: Advanced Setup (All Frameworks Separately)
