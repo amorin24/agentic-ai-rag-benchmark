@@ -12,6 +12,9 @@ The project currently supports the following agent frameworks:
 - [Google ADK](./googleadk.md): Google's Agent Development Kit for building AI agents
 - [SquidAI](./squidai.md): A framework for building tool-using agents
 - [LettaAI](./lettaai.md): A framework for building memory-augmented agents
+- [Portia AI](./portiaai.md): A framework for building knowledge graph-enhanced agents
+- [H2O AI](./h2oai.md): A framework for building predictive analytics and machine learning-powered agents
+- [UiPath](./uipath.md): A framework for building process automation agents
 
 ## Common Architecture
 
