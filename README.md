@@ -1,6 +1,6 @@
 # Agentic AI RAG Benchmark
 
-A framework for evaluating and comparing different agentic AI frameworks (CrewAI, AutoGen, LangGraph, Google ADK, SquidAI, and LettaAI) using a shared RAG (Retrieval-Augmented Generation) microservice.
+A framework for evaluating and comparing different agentic AI frameworks (CrewAI, AutoGen, LangGraph, Google ADK, SquidAI, LettaAI, Portia AI, H2O AI, and UiPath) using a shared RAG (Retrieval-Augmented Generation) microservice.
 
 ## Overview
 
@@ -24,6 +24,9 @@ This project provides a standardized way to benchmark various agentic AI framewo
 │   ├── googleadk/        # Google ADK implementation
 │   ├── squidai/          # SquidAI implementation
 │   ├── lettaai/          # LettaAI implementation
+│   ├── portiaai/         # Portia AI implementation
+│   ├── h2oai/            # H2O AI implementation
+│   ├── uipath/           # UiPath implementation
 │   └── common/           # Shared agent utilities
 ├── data/                 # Data for RAG and benchmarking
 │   └── processed/        # Processed documents and vectors
@@ -226,6 +229,15 @@ python -m agents.squidai.runner --topic "Meta"
 
 # Run LettaAI agent
 python -m agents.lettaai.runner --topic "Netflix"
+
+# Run Portia AI agent
+python -m agents.portiaai.runner --topic "Google"
+
+# Run H2O AI agent
+python -m agents.h2oai.runner --topic "IBM"
+
+# Run UiPath agent
+python -m agents.uipath.runner --topic "Oracle"
 ```
 
 ### 4. Start the UI

@@ -12,6 +12,9 @@ The project currently supports the following agent frameworks:
 4. **Google ADK**: Google's Agent Development Kit for building AI agents
 5. **SquidAI**: A framework for building tool-using agents
 6. **LettaAI**: A framework for building memory-augmented agents
+7. **Portia AI**: A framework for building knowledge graph-enhanced agents
+8. **H2O AI**: A framework for building predictive analytics and machine learning-powered agents
+9. **UiPath**: A framework for building process automation agents
 
 ## Running Agent Frameworks
 
@@ -192,6 +195,78 @@ LettaAI creates an agent with the following memory types:
 2. **Episodic Memory**: Stores past experiences and interactions
 3. **Semantic Memory**: Stores general knowledge and facts
 
+### Portia AI
+
+Portia AI uses a knowledge graph-enhanced approach:
+
+```python
+from agents.portiaai.runner import PortiaAIRunner
+
+# Create a Portia AI runner
+runner = PortiaAIRunner()
+
+# Run the agent
+result = runner.run_task("Tesla")
+
+# Print the result
+print(result["final_output"])
+```
+
+Portia AI creates an agent with the following components:
+
+1. **Knowledge Graph Builder**: Builds a knowledge graph from retrieved information
+2. **Entity Analysis**: Analyzes entities in the knowledge graph
+3. **Relationship Mapping**: Maps relationships between entities
+4. **Graph-Based Analysis**: Extracts insights from the knowledge graph
+
+### H2O AI
+
+H2O AI uses a predictive analytics approach:
+
+```python
+from agents.h2oai.runner import H2OAIRunner
+
+# Create an H2O AI runner
+runner = H2OAIRunner()
+
+# Run the agent
+result = runner.run_task("Tesla")
+
+# Print the result
+print(result["final_output"])
+```
+
+H2O AI creates an agent with the following components:
+
+1. **Data Preprocessing**: Cleans and structures the data
+2. **Time Series Analysis**: Analyzes trends and patterns over time
+3. **Market Segmentation**: Identifies key market segments
+4. **Predictive Modeling**: Builds models to forecast future performance
+
+### UiPath
+
+UiPath uses a process automation approach:
+
+```python
+from agents.uipath.runner import UiPathRunner
+
+# Create a UiPath runner
+runner = UiPathRunner()
+
+# Run the agent
+result = runner.run_task("Tesla")
+
+# Print the result
+print(result["final_output"])
+```
+
+UiPath creates an agent with the following components:
+
+1. **Workflow Planner**: Plans the research workflow
+2. **Data Collection Process**: Gathers information from various sources
+3. **Data Structuring Process**: Organizes the collected data
+4. **Comparative Analysis**: Compares the company with competitors
+
 ## Comparing Agent Frameworks
 
 To compare multiple agent frameworks:
@@ -240,6 +315,18 @@ SQUIDAI_MEMORY_ENABLED=True
 # LettaAI Configuration
 LETTAAI_MEMORY_TYPES=3
 LETTAAI_WORKFLOW_COUNT=3
+
+# Portia AI Configuration
+PORTIAAI_ENTITY_THRESHOLD=0.7
+PORTIAAI_RELATION_THRESHOLD=0.6
+
+# H2O AI Configuration
+H2OAI_MODEL_TYPE=gradient_boosting
+H2OAI_FORECAST_HORIZON=90
+
+# UiPath Configuration
+UIPATH_PROCESS_TIMEOUT=60
+UIPATH_MAX_SOURCES=10
 ```
 
 ## Logging
