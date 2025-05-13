@@ -116,14 +116,29 @@ class AgentEvaluator:
             factual_overlap = self._evaluate_factual_overlap(final_output, rag_context)
             reasoning_clarity = self._evaluate_reasoning_clarity(final_output, steps)
             
-            results[agent_name] = {
+            result_dict = {
                 "response_time": response_time,
                 "token_usage": token_usage,
-                "factual_overlap": factual_overlap,
-                "reasoning_clarity": reasoning_clarity,
                 "final_output": final_output,
-                "steps": steps
+                "steps": steps,
+                "evaluation_status": {}
             }
+            
+            if factual_overlap is None:
+                result_dict["factual_overlap"] = 0.0
+                result_dict["evaluation_status"]["factual_overlap"] = "failed"
+            else:
+                result_dict["factual_overlap"] = factual_overlap
+                result_dict["evaluation_status"]["factual_overlap"] = "success"
+            
+            if reasoning_clarity is None:
+                result_dict["reasoning_clarity"] = 0.0
+                result_dict["evaluation_status"]["reasoning_clarity"] = "failed"
+            else:
+                result_dict["reasoning_clarity"] = reasoning_clarity
+                result_dict["evaluation_status"]["reasoning_clarity"] = "success"
+            
+            results[agent_name] = result_dict
             
             logger.info(f"Completed evaluation for {agent_name}")
         
@@ -167,9 +182,10 @@ class AgentEvaluator:
             rag_context: RAG context documents
             
         Returns:
-            Factual overlap score (0-1)
+            Factual overlap score (0-1) or None if evaluation fails
         """
         if not rag_context:
+            logger.warning("No RAG context available for factual overlap evaluation")
             return 0.0
         
         try:
@@ -182,7 +198,7 @@ class AgentEvaluator:
                 
         except Exception as e:
             logger.error(f"Error evaluating factual overlap: {str(e)}")
-            return 0.5  # Default to middle score if evaluation fails
+            return None
     
     def _evaluate_reasoning_clarity(self, output: str, steps: List[Dict[str, Any]]) -> float:
         """
@@ -196,8 +212,12 @@ class AgentEvaluator:
             steps: Agent execution steps
             
         Returns:
-            Reasoning clarity score (0-1)
+            Reasoning clarity score (0-1) or None if evaluation fails
         """
+        if not steps:
+            logger.warning("No steps available for reasoning clarity evaluation")
+            return 0.0
+            
         try:
             step_count = len(steps)
             avg_step_count = 5  # Expected average number of steps
@@ -233,7 +253,7 @@ class AgentEvaluator:
                 
         except Exception as e:
             logger.error(f"Error evaluating reasoning clarity: {str(e)}")
-            return 0.5  # Default to middle score if evaluation fails
+            return None
     
     def _save_results(self, results: Dict[str, Dict[str, Any]], output_path: str) -> None:
         """

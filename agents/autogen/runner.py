@@ -143,18 +143,49 @@ class AutoGenRunner(AgentRunner):
                     })
                 
                 if not results:
+                    self._add_step("warning", {
+                        "message": f"No results found for query: '{query}'",
+                        "action": "Using fallback data for analysis"
+                    })
                     results = self._generate_placeholder_results(company, aspect)
+                    for result in results:
+                        result["metadata"]["simulated"] = True
+                        result["metadata"]["reason"] = "No results from RAG service"
                 
                 self._update_token_usage(120)
                 
                 return results
             else:
-                logger.warning(f"RAG service returned status code {response.status_code}")
-                return self._generate_placeholder_results(company, aspect)
+                error_msg = f"RAG service returned status code {response.status_code}"
+                logger.warning(error_msg)
+                
+                self._add_step("error", {
+                    "message": error_msg,
+                    "action": "Using fallback data for analysis"
+                })
+                
+                results = self._generate_placeholder_results(company, aspect)
+                for result in results:
+                    result["metadata"]["simulated"] = True
+                    result["metadata"]["reason"] = error_msg
+                
+                return results
                 
         except Exception as e:
-            logger.error(f"Error querying RAG service: {str(e)}")
-            return self._generate_placeholder_results(company, aspect)
+            error_msg = f"Error querying RAG service: {str(e)}"
+            logger.error(error_msg)
+            
+            self._add_step("error", {
+                "message": error_msg,
+                "action": "Using fallback data for analysis"
+            })
+            
+            results = self._generate_placeholder_results(company, aspect)
+            for result in results:
+                result["metadata"]["simulated"] = True
+                result["metadata"]["reason"] = error_msg
+            
+            return results
     
     def _generate_placeholder_results(self, company: str, aspect: str) -> List[Dict[str, Any]]:
         """

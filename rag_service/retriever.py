@@ -22,12 +22,14 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-VECTOR_DIR = Path(os.getenv('VECTOR_DIR', 'data/vectors'))
+VECTOR_DIR = Path(os.getenv('VECTOR_DB_PATH', os.getenv('VECTOR_DIR', 'data/vectors')))
 PROCESSED_DIR = Path(os.getenv('PROCESSED_DOCS_DIR', 'data/processed'))
 DEFAULT_TOP_K = int(os.getenv('DEFAULT_TOP_K', '5'))
 
 VECTOR_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
+logger.info(f"Using vector store directory: {VECTOR_DIR}")
 
 class Retriever:
     """
