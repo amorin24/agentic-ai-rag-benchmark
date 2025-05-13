@@ -22,6 +22,9 @@ interface AgentResults {
   googleadk?: AgentResponse;
   squidai?: AgentResponse;
   lettaai?: AgentResponse;
+  portiaai?: AgentResponse;
+  h2oai?: AgentResponse;
+  uipath?: AgentResponse;
 }
 
 interface TabPanelProps {
@@ -92,7 +95,10 @@ const agentRunnerApi = {
       return response.data.frameworks || [];
     } catch (error) {
       console.error('Error fetching available agents:', error);
-      return ['crewai', 'autogen', 'langgraph', 'googleadk', 'squidai', 'lettaai'];
+      return [
+        'crewai', 'autogen', 'langgraph', 'googleadk', 'squidai', 'lettaai',
+        'portiaai', 'h2oai', 'uipath'
+      ];
     }
   }
 };

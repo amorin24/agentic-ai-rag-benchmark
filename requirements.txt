@@ -19,6 +19,9 @@ langgraph>=0.0.10
 google-adk>=0.1.0  # Google Agent Development Kit
 squidai>=0.1.0     # SquidAI framework
 lettaai>=0.1.0     # LettaAI framework
+portiaai>=0.1.0    # Portia AI framework
+h2oai>=0.1.0       # H2O AI framework
+uipath>=0.1.0      # UiPath framework
 
 # Testing
 pytest>=7.3.1

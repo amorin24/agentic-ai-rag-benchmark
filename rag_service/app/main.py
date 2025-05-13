@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Dict, Any
+from fastapi.responses import RedirectResponse
 
 app = FastAPI(title="RAG Service API")
 
@@ -13,42 +12,21 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-class QueryRequest(BaseModel):
-    query: str
-    top_k: int = 5
+from .api import app as api_app
 
-class Document(BaseModel):
-    content: str
-    metadata: Dict[str, Any] = {}
+for route in api_app.routes:
+    app.routes.append(route)
 
-class QueryResponse(BaseModel):
-    documents: List[Document]
-    query: str
-
-class IngestRequest(BaseModel):
-    documents: List[Document]
+@app.get("/", include_in_schema=False)
+async def root():
+    """
+    Redirect to API documentation.
+    """
+    return RedirectResponse(url="/docs")
 
 @app.get("/health")
 def health_check():
+    """
+    Health check endpoint.
+    """
     return {"status": "healthy"}
-
-@app.post("/query", response_model=QueryResponse)
-async def query_documents(request: QueryRequest):
-    """
-    Retrieve relevant documents based on a query.
-    """
-    documents = [
-        Document(
-            content="This is a placeholder document.",
-            metadata={"source": "placeholder"}
-        )
-    ]
-    
-    return QueryResponse(documents=documents, query=request.query)
-
-@app.post("/ingest")
-async def ingest_documents(request: IngestRequest):
-    """
-    Add new documents to the knowledge base.
-    """
-    return {"status": "success", "documents_ingested": len(request.documents)}
