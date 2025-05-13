@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  rag-service:
+  rag_service:
     build:
       context: ..
       dockerfile: docker/rag_service.Dockerfile
@@ -10,6 +10,7 @@ services:
     volumes:
       - ../data:/app/data
       - ../logs:/app/logs
+      - ../vector_store:/app/vector_store  # Add persistent volume for vector store
     env_file:
       - ../.env
     healthcheck:
@@ -17,45 +18,26 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - rag_benchmark_network
 
-  crewai-agent:
+  agent_runner:
     build:
       context: ..
-      dockerfile: docker/crewai_agent.Dockerfile
+      dockerfile: docker/agent_runner.Dockerfile
     depends_on:
-      rag-service:
+      rag_service:
         condition: service_healthy
     volumes:
       - ../data:/app/data
       - ../logs:/app/logs
     env_file:
       - ../.env
-
-  autogen-agent:
-    build:
-      context: ..
-      dockerfile: docker/autogen_agent.Dockerfile
-    depends_on:
-      rag-service:
-        condition: service_healthy
-    volumes:
-      - ../data:/app/data
-      - ../logs:/app/logs
-    env_file:
-      - ../.env
-
-  langgraph-agent:
-    build:
-      context: ..
-      dockerfile: docker/langgraph_agent.Dockerfile
-    depends_on:
-      rag-service:
-        condition: service_healthy
-    volumes:
-      - ../data:/app/data
-      - ../logs:/app/logs
-    env_file:
-      - ../.env
+    environment:
+      - AGENT_FRAMEWORK=${AGENT_FRAMEWORK:-crewai}  # Default to crewai if not specified
+    networks:
+      - rag_benchmark_network
+    command: ["python", "-m", "agents.${AGENT_FRAMEWORK:-crewai}.runner"]
 
   ui:
     build:
@@ -64,9 +46,18 @@ services:
     ports:
       - "${UI_PORT:-3000}:3000"
     depends_on:
-      - rag-service
-      - crewai-agent
-      - autogen-agent
-      - langgraph-agent
+      - rag_service
+      - agent_runner
+    volumes:
+      - ../data:/app/data
+      - ../logs:/app/logs
     env_file:
       - ../.env
+    environment:
+      - REACT_APP_RAG_SERVICE_URL=http://rag_service:8000
+    networks:
+      - rag_benchmark_network
+
+networks:
+  rag_benchmark_network:
+    driver: bridge
