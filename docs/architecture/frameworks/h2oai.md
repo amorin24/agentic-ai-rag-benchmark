@@ -1,10 +1,10 @@
-# H2O AI Framework Architecture
+# H2O AI Framework Architecture (Mock Implementation)
 
-This document provides a detailed architecture diagram and explanation for the H2O AI framework implementation in the Agentic AI RAG Benchmark project.
+This document provides a detailed architecture diagram and explanation for the H2O AI framework implementation in the Agentic AI RAG Benchmark project. Note that this is a **mock implementation** as the H2O AI framework does not actually exist on PyPI in the form used here.
 
 ## Overview
 
-H2O AI is a framework for building predictive analytics and machine learning-powered agents. In this implementation, H2O AI is used to create a research agent that can gather and analyze information about a company using predictive analytics techniques, leveraging the RAG service for knowledge retrieval.
+H2O AI is a simulated framework for building predictive analytics and machine learning-powered agents. In this mock implementation, H2O AI is used to create a research agent that can gather and analyze information about a company using predictive analytics techniques, leveraging the RAG service for knowledge retrieval. The implementation simulates the behavior of a predictive analytics agent framework without requiring the actual framework package.
 
 ## Architecture Diagram
 

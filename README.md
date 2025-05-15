@@ -1,6 +1,6 @@
 # Agentic AI RAG Benchmark
 
-A framework for evaluating and comparing different agentic AI frameworks (CrewAI, AutoGen, LangGraph, Google ADK, SquidAI, LettaAI, Portia AI, H2O AI, and UiPath) using a shared RAG (Retrieval-Augmented Generation) microservice.
+A framework for evaluating and comparing different agentic AI frameworks using a shared RAG (Retrieval-Augmented Generation) microservice. Includes real implementations (CrewAI, AutoGen, LangGraph, Google ADK) and mock implementations (SquidAI, LettaAI, Portia AI, H2O AI, and UiPath) for demonstration and comparison.
 
 ## Overview
 
@@ -10,6 +10,8 @@ This project provides a standardized way to benchmark various agentic AI framewo
 
 - **RAG Service**: A centralized FastAPI service with FAISS for vector retrieval
 - **Agent Runners**: Modular implementations for different agent frameworks
+  - **Real Implementations**: CrewAI, AutoGen, LangGraph, Google ADK
+  - **Mock Implementations**: SquidAI, LettaAI, Portia AI, H2O AI, UiPath
 - **UI Viewer**: React-based interface for comparing outputs side-by-side
 - **Docker Support**: Local orchestration of all components
 

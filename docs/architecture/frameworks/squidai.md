@@ -1,10 +1,10 @@
-# SquidAI Framework Architecture
+# SquidAI Framework Architecture (Mock Implementation)
 
-This document provides a detailed architecture diagram and explanation for the SquidAI framework implementation in the Agentic AI RAG Benchmark project.
+This document provides a detailed architecture diagram and explanation for the SquidAI framework implementation in the Agentic AI RAG Benchmark project. Note that this is a **mock implementation** as the SquidAI framework does not actually exist on PyPI.
 
 ## Overview
 
-SquidAI is a framework for building tool-using agents. In this implementation, SquidAI is used to create a research agent that uses specialized tools to gather and analyze information about a company, leveraging the RAG service for knowledge retrieval.
+SquidAI is a simulated framework for building tool-using agents. In this mock implementation, SquidAI is used to create a research agent that uses specialized tools to gather and analyze information about a company, leveraging the RAG service for knowledge retrieval. The implementation simulates the behavior of a tool-based agent framework without requiring the actual framework package.
 
 ## Architecture Diagram
 
