@@ -96,8 +96,8 @@ const agentRunnerApi = {
     } catch (error) {
       console.error('Error fetching available agents:', error);
       return [
-        'crewai', 'autogen', 'langgraph', 'googleadk', 'squidai', 'lettaai',
-        'portiaai', 'h2oai', 'uipath'
+        'crewai', 'autogen', 'langgraph', 'googleadk',
+        'squidai', 'lettaai', 'portiaai', 'h2oai', 'uipath'
       ];
     }
   }
@@ -275,6 +275,10 @@ function App() {
                     onClick={() => handleTabChange(index)}
                   >
                     {agentName.charAt(0).toUpperCase() + agentName.slice(1)}
+                    {/* Add badge for mock implementations */}
+                    {['squidai', 'lettaai', 'portiaai', 'h2oai', 'uipath'].includes(agentName) && (
+                      <span className="ml-1 px-1 py-0.5 text-xs bg-gray-200 text-gray-700 rounded">mock</span>
+                    )}
                   </button>
                 ))}
                 <button
@@ -309,10 +313,15 @@ function App() {
 }
 
 function AgentResultPanel({ result }: { result: AgentResponse }) {
+  const isMockImplementation = ['squidai', 'lettaai', 'portiaai', 'h2oai', 'uipath'].includes(result.agent_name);
+  
   return (
     <div>
       <h3 className="text-xl font-semibold mb-4 text-gray-800">
         {result.agent_name.charAt(0).toUpperCase() + result.agent_name.slice(1)} Results
+        {isMockImplementation && (
+          <span className="ml-2 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded">Mock Implementation</span>
+        )}
       </h3>
       
       <div className="bg-gray-50 p-4 rounded-md mb-6 border">

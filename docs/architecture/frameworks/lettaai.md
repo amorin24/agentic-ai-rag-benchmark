@@ -1,10 +1,10 @@
-# LettaAI Framework Architecture
+# LettaAI Framework Architecture (Mock Implementation)
 
-This document provides a detailed architecture diagram and explanation for the LettaAI framework implementation in the Agentic AI RAG Benchmark project.
+This document provides a detailed architecture diagram and explanation for the LettaAI framework implementation in the Agentic AI RAG Benchmark project. Note that this is a **mock implementation** as the LettaAI framework does not actually exist on PyPI.
 
 ## Overview
 
-LettaAI is a framework for building memory-augmented agents. In this implementation, LettaAI is used to create a research agent that can gather and analyze information about a company, with a focus on maintaining and utilizing memory for more coherent and contextual research.
+LettaAI is a simulated framework for building memory-augmented agents. In this mock implementation, LettaAI is used to create a research agent that can gather and analyze information about a company, with a focus on maintaining and utilizing memory for more coherent and contextual research. The implementation simulates the behavior of a memory-augmented agent framework without requiring the actual framework package.
 
 ## Architecture Diagram
 
