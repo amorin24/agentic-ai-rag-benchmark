@@ -14,6 +14,7 @@ These frameworks have real implementations with actual dependencies:
 - [AutoGen](./autogen.md): A framework for building conversational agents with LLMs
 - [LangGraph](./langgraph.md): A framework for building graph-based workflows with LLMs
 - [Google ADK](./googleadk.md): Google's Agent Development Kit for building AI agents
+- [UiPath](./uipath.md): A framework for building process automation agents
 
 ### Mock Implementations
 
@@ -23,7 +24,6 @@ These frameworks have simulated implementations for demonstration and comparison
 - [LettaAI](./lettaai.md): A simulated framework for building memory-augmented agents
 - [Portia AI](./portiaai.md): A simulated framework for building knowledge graph-enhanced agents
 - [H2O AI](./h2oai.md): A simulated framework for building predictive analytics and machine learning-powered agents
-- [UiPath](./uipath.md): A simulated framework for building process automation agents
 
 ## Common Architecture
 

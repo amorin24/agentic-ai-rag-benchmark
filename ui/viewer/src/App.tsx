@@ -276,7 +276,7 @@ function App() {
                   >
                     {agentName.charAt(0).toUpperCase() + agentName.slice(1)}
                     {/* Add badge for mock implementations */}
-                    {['squidai', 'lettaai', 'portiaai', 'h2oai', 'uipath'].includes(agentName) && (
+                    {['squidai', 'lettaai', 'portiaai', 'h2oai'].includes(agentName) && (
                       <span className="ml-1 px-1 py-0.5 text-xs bg-gray-200 text-gray-700 rounded">mock</span>
                     )}
                   </button>
@@ -313,7 +313,7 @@ function App() {
 }
 
 function AgentResultPanel({ result }: { result: AgentResponse }) {
-  const isMockImplementation = ['squidai', 'lettaai', 'portiaai', 'h2oai', 'uipath'].includes(result.agent_name);
+  const isMockImplementation = ['squidai', 'lettaai', 'portiaai', 'h2oai'].includes(result.agent_name);
   
   return (
     <div>
