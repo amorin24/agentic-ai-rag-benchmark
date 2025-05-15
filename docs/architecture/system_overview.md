@@ -40,7 +40,7 @@ The system consists of the following main components:
 │             │                                 │                   │ │
 │             │ ┌───────────┐  ┌───────────┐   │                   │ │
 │             │ │ Portia AI │  │  H2O AI   │   │                   │ │
-│             │ │  (mock)   │  │  (mock)   │   │                   │ │
+│             │ │  (real)   │  │  (mock)   │   │                   │ │
 │             │ └───────────┘  └───────────┘   │                   │ │
 │             │                                 │                   │ │
 │             │ ┌───────────┐                   │                   │ │

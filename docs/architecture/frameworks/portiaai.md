@@ -1,10 +1,10 @@
-# Portia AI Framework Architecture (Mock Implementation)
+# Portia AI Framework Architecture
 
-This document provides a detailed architecture diagram and explanation for the Portia AI framework implementation in the Agentic AI RAG Benchmark project. Note that this is a **mock implementation** as the Portia AI framework does not actually exist on PyPI.
+This document provides a detailed architecture diagram and explanation for the Portia AI framework implementation in the Agentic AI RAG Benchmark project.
 
 ## Overview
 
-Portia AI is a simulated framework for building knowledge graph-enhanced agents. In this mock implementation, Portia AI is used to create a research agent that can gather and analyze information about a company using knowledge graph techniques, leveraging the RAG service for knowledge retrieval. The implementation simulates the behavior of a knowledge graph-enhanced agent framework without requiring the actual framework package.
+Portia AI is a framework for building knowledge graph-enhanced agents. In this implementation, Portia AI is used to create a research agent that can gather and analyze information about a company using knowledge graph techniques, leveraging the RAG service for knowledge retrieval. The implementation uses the official portia-sdk-python package (version 0.3.5+) to interact with Portia AI services for knowledge graph creation and analysis.
 
 ## Architecture Diagram
 

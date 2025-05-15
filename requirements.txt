@@ -18,10 +18,10 @@ autogen>=0.9.1   # Updated to latest version
 langgraph>=0.4.4 # Updated to latest version
 google-adk>=0.5.0  # Updated to latest version
 uipath>=2.0.54   # Real UiPath implementation (no longer mock)
+portia-sdk-python>=0.3.5  # Real Portia AI implementation (no longer mock)
 # The following packages don't exist on PyPI and are implemented as mocks in the codebase
 # squidai>=0.1.0     # SquidAI framework
 # lettaai>=0.1.0     # LettaAI framework
-# portiaai>=0.1.0    # Portia AI framework
 # h2oai>=0.1.0       # H2O AI framework
 
 # Testing
