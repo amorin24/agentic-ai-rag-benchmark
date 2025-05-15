@@ -1,10 +1,10 @@
-# UiPath Framework Architecture (Mock Implementation)
+# UiPath Framework Architecture
 
-This document provides a detailed architecture diagram and explanation for the UiPath framework implementation in the Agentic AI RAG Benchmark project. Note that this is a **mock implementation** as the UiPath framework version used here does not actually exist on PyPI.
+This document provides a detailed architecture diagram and explanation for the UiPath framework implementation in the Agentic AI RAG Benchmark project.
 
 ## Overview
 
-UiPath is a simulated framework for building process automation agents. In this mock implementation, UiPath is used to create a research agent that can gather and analyze information about a company using automated workflows, leveraging the RAG service for knowledge retrieval. The implementation simulates the behavior of a process automation agent framework without requiring the actual framework package.
+UiPath is a framework for building process automation agents. In this implementation, UiPath is used to create a research agent that can gather and analyze information about a company using automated workflows, leveraging the RAG service for knowledge retrieval. The implementation uses the official UiPath Python SDK (version 2.0.54+) to interact with UiPath Cloud Platform services.
 
 ## Architecture Diagram
 
