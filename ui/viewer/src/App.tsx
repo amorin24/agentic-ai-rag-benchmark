@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useLogContext, LogProvider } from './contexts/LogContext';
+import { COMPANY_OPTIONS, AGENT_FRAMEWORKS } from './config/config';
+import LogPanel from './components/LogPanel';
+import ErrorBoundary from './components/ErrorBoundary';
+import { agentRunnerService } from './services/api';
 
 interface AgentStep {
   type: string;
@@ -72,36 +77,7 @@ function Collapsible({ title, children, defaultOpen = false }: CollapsibleProps)
   );
 }
 
-const agentRunnerApi = {
-  baseUrl: process.env.REACT_APP_AGENT_RUNNER_URL || 'http://localhost:8001',
-  
-  async runAgent(agentName: string, topic: string): Promise<AgentResponse> {
-    try {
-      const response = await axios.post(`${this.baseUrl}/run`, {
-        agent: agentName,
-        topic: topic
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error(`Error running ${agentName} agent:`, error);
-      throw error;
-    }
-  },
-  
-  async getAvailableAgents(): Promise<string[]> {
-    try {
-      const response = await axios.get(`${this.baseUrl}/frameworks`);
-      return response.data.frameworks || [];
-    } catch (error) {
-      console.error('Error fetching available agents:', error);
-      return [
-        'crewai', 'autogen', 'langgraph', 'googleadk',
-        'squidai', 'lettaai', 'portiaai', 'h2oai', 'uipath'
-      ];
-    }
-  }
-};
+const agentRunnerApi = agentRunnerService;
 
 function App() {
   return (
@@ -144,9 +120,17 @@ function AppContent() {
     setLoading(true);
     setError(null);
     
+    addLog({
+      source: 'System',
+      level: 'info',
+      message: `Starting agent execution for company: ${company}`,
+      timestamp: new Date().toISOString(),
+      details: { company }
+    });
+    
     try {
       const agents = availableAgents.length > 0 ? availableAgents : 
-        ['crewai', 'autogen', 'langgraph', 'googleadk', 'squidai', 'lettaai'];
+        AGENT_FRAMEWORKS;
       
       const agentPromises = agents.map(agent => runAgent(agent, company));
       const agentResults = await Promise.all(agentPromises);
@@ -157,9 +141,28 @@ function AppContent() {
       });
       
       setResults(resultsObject);
+      
+      addLog({
+        source: 'System',
+        level: 'success',
+        message: `All agents completed successfully for company: ${company}`,
+        timestamp: new Date().toISOString(),
+        details: { 
+          agentCount: agents.length,
+          company
+        }
+      });
     } catch (error) {
+      addLog({
+        source: 'System',
+        level: 'error',
+        message: 'Failed to run one or more agents',
+        timestamp: new Date().toISOString(),
+        details: error instanceof Error ? error.message : String(error)
+      });
+      
       console.error('Error running agents:', error);
-      setError('Failed to run one or more agents. Check console for details.');
+      setError('Failed to run one or more agents. Check the logs for details.');
     } finally {
       setLoading(false);
     }
@@ -167,9 +170,42 @@ function AppContent() {
 
   const runAgent = async (agentName: string, topic: string): Promise<AgentResponse> => {
     try {
-      return await agentRunnerApi.runAgent(agentName, topic);
+      addLog({
+        source: 'System',
+        level: 'info',
+        message: `Starting ${agentName} agent for topic: ${topic}`,
+        timestamp: new Date().toISOString(),
+        agentName: agentName,
+        taskId: Date.now().toString(),
+        details: { topic }
+      });
+      
+      const result = await agentRunnerApi.runAgent(agentName, topic);
+      
+      addLog({
+        source: 'System',
+        level: 'success',
+        message: `${agentName} agent completed successfully`,
+        timestamp: new Date().toISOString(),
+        agentName: agentName,
+        taskId: Date.now().toString(),
+        details: { 
+          responseTime: result.response_time,
+          tokenUsage: result.token_usage
+        }
+      });
+      
+      return result;
     } catch (error) {
-      console.error(`Error running ${agentName} agent:`, error);
+      addLog({
+        source: 'System',
+        level: 'error',
+        message: `Error running ${agentName} agent`,
+        timestamp: new Date().toISOString(),
+        agentName: agentName,
+        taskId: Date.now().toString(),
+        details: error instanceof Error ? error.message : String(error)
+      });
       
       return {
         agent_name: agentName,
@@ -194,17 +230,26 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">
-          Agentic AI RAG Benchmark
-        </h1>
-        
-        {/* Input section */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">
-            Company Research
-          </h2>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-6 text-gray-800">
+            Agentic AI RAG Benchmark
+          </h1>
+          
+          {/* System Log Panel */}
+          <LogPanel 
+            maxHeight="300px"
+            filter={{ source: 'System' }}
+            autoScroll={true}
+            showClearButton={true}
+          />
+          
+          {/* Input section */}
+          <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">
+              Company Research
+            </h2>
           
           <div className="mb-4">
             <label htmlFor="company-select" className="block text-sm font-medium text-gray-700 mb-1">
@@ -309,6 +354,7 @@ function AppContent() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
 
