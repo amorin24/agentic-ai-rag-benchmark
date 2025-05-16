@@ -1,3 +1,6 @@
+# Python Version Requirement
+# Python >=3.10 (required by CrewAI and UiPath)
+
 # Core Dependencies
 fastapi>=0.95.0
 uvicorn>=0.21.1
@@ -13,12 +16,18 @@ beautifulsoup4>=4.12.0
 requests>=2.28.2
 
 # Agent Framework Dependencies
-crewai>=0.120.1  # Updated to latest version
-autogen>=0.9.1   # Updated to latest version
-langgraph>=0.4.4 # Updated to latest version
-google-adk>=0.5.0  # Updated to latest version
-uipath>=2.0.54   # Real UiPath implementation (no longer mock)
-portia-sdk-python>=0.3.5  # Real Portia AI implementation (no longer mock)
+crewai>=0.120.1  # Updated to latest version (requires Python >=3.10)
+autogen>=0.9.1   # Updated to latest version (requires Python >=3.9)
+langgraph>=0.4.4 # Updated to latest version (requires Python >=3.9)
+google-adk>=0.5.0  # Updated to latest version (requires Python >=3.9)
+uipath>=2.0.54   # Real UiPath implementation (requires Python >=3.10)
+
+# Note: Portia SDK is installed from requirements-portia.txt
+# due to dependency conflict with LangGraph versions
+
+# Framework-specific Dependencies
+openai>=1.3.0  # Required by CrewAI and other frameworks
+
 # The following packages don't exist on PyPI and are implemented as mocks in the codebase
 # squidai>=0.1.0     # SquidAI framework
 # lettaai>=0.1.0     # LettaAI framework

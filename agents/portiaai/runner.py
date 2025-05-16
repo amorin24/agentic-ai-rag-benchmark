@@ -10,16 +10,64 @@ import time
 import json
 import logging
 import requests
+import importlib.util
+import subprocess
+import sys
+import tempfile
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Check if Portia SDK is available
+PORTIA_AVAILABLE = False
+PORTIA_VENV_PATH = None
+
 try:
-    from portia import PortiaClient, KnowledgeGraph, Entity, Relation
-    PORTIA_AVAILABLE = True
-except ImportError:
-    PORTIA_AVAILABLE = False
-    logging.warning("Portia SDK not available. Using fallback implementation.")
+    if importlib.util.find_spec("portia") is not None:
+        try:
+            from portia import PortiaClient, KnowledgeGraph, Entity, Relation
+            PORTIA_AVAILABLE = True
+            logger.info("Portia SDK loaded successfully via direct import")
+        except ImportError as e:
+            if "langgraph" in str(e):
+                logger.warning(f"LangGraph version conflict detected: {str(e)}")
+                
+                current_file = Path(__file__)
+                project_root = current_file.parent.parent.parent.absolute()
+                
+                portia_req_path = project_root / "requirements-portia.txt"
+                
+                if portia_req_path.exists():
+                    try:
+                        PORTIA_VENV_PATH = project_root / ".venv-portia"
+                        
+                        if not PORTIA_VENV_PATH.exists():
+                            logger.info(f"Creating virtual environment for Portia SDK at {PORTIA_VENV_PATH}")
+                            subprocess.check_call([sys.executable, "-m", "venv", str(PORTIA_VENV_PATH)])
+                        
+                        if os.name == 'nt':  # Windows
+                            pip_path = PORTIA_VENV_PATH / "Scripts" / "pip"
+                        else:  # Unix/Linux/Mac
+                            pip_path = PORTIA_VENV_PATH / "bin" / "pip"
+                        
+                        logger.info(f"Installing Portia SDK requirements from {portia_req_path}")
+                        subprocess.check_call([str(pip_path), "install", "-r", str(portia_req_path)])
+                        
+                        PORTIA_AVAILABLE = True
+                        logger.info("Portia SDK installed in separate environment")
+                    except subprocess.CalledProcessError as e:
+                        logger.error(f"Failed to install Portia SDK: {str(e)}")
+            else:
+                logger.warning(f"Error importing Portia SDK: {str(e)}")
+    else:
+        logger.warning("Portia SDK not available. Using fallback implementation.")
+except Exception as e:
+    logger.warning(f"Error checking for Portia SDK: {str(e)}")
+    logger.warning("Using fallback implementation.")
 
 from agents.base_agent_runner import AgentRunner
 
@@ -50,19 +98,23 @@ class PortiaAIRunner(AgentRunner):
         """
         super().__init__("portiaai", rag_service_url)
         
-        # Initialize Portia SDK client if available
+        # Initialize Portia SDK client if available via direct import
         self.portia_client = None
         self.knowledge_graph = None
         
-        if PORTIA_AVAILABLE:
+        if PORTIA_AVAILABLE and not PORTIA_VENV_PATH:
             try:
                 self.portia_client = PortiaClient(
                     api_key=os.getenv("PORTIA_API_KEY"),
                     base_url=os.getenv("PORTIA_API_URL", "https://api.portia.ai")
                 )
                 logger.info("Portia SDK client initialized successfully")
+                
+                self.knowledge_graph = KnowledgeGraph(name="default-research")
             except Exception as e:
                 logger.error(f"Failed to initialize Portia SDK client: {str(e)}")
+        elif PORTIA_VENV_PATH:
+            logger.info("Using Portia SDK in separate virtual environment")
         
         
     def run_task(self, topic: str) -> Dict[str, Any]:
@@ -308,59 +360,167 @@ class PortiaAIRunner(AgentRunner):
             market_info: Market information
         """
         try:
-            if not self.portia_client or not self.knowledge_graph:
+            if not self.portia_client and not PORTIA_VENV_PATH:
                 self._simulate_knowledge_graph_analysis(company, company_info, news_info, product_info, market_info)
                 return
                 
             logger.info(f"Building knowledge graph for {company} using Portia AI")
             
-            # Extract entities and relationships from the retrieved information
-            company_entity = Entity(
-                type="Company",
-                name=company,
-                attributes={"industry": "Technology", "founded": "2005"}
-            )
-            
-            self.knowledge_graph.add_entity(company_entity)
-            
-            products = []
-            for info in product_info:
-                # In a real implementation, we would use NLP to extract product names
-                product_name = f"{company} Flagship Product"
-                product_entity = Entity(
-                    type="Product",
-                    name=product_name,
-                    attributes={"launched": "2020"}
+            if self.portia_client and not PORTIA_VENV_PATH:
+                # Extract entities and relationships from the retrieved information
+                company_entity = Entity(
+                    type="Company",
+                    name=company,
+                    attributes={"industry": "Technology", "founded": "2005"}
                 )
-                self.knowledge_graph.add_entity(product_entity)
-                products.append(product_entity)
                 
-                relation = Relation(
-                    source=company,
-                    relation="OFFERS",
-                    target=product_name
+                self.knowledge_graph.add_entity(company_entity)
+                
+                products = []
+                for info in product_info:
+                    # In a real implementation, we would use NLP to extract product names
+                    product_name = f"{company} Flagship Product"
+                    product_entity = Entity(
+                        type="Product",
+                        name=product_name,
+                        attributes={"launched": "2020"}
+                    )
+                    self.knowledge_graph.add_entity(product_entity)
+                    products.append(product_entity)
+                    
+                    relation = Relation(
+                        source=company,
+                        relation="OFFERS",
+                        target=product_name
+                    )
+                    self.knowledge_graph.add_relation(relation)
+                
+                # Extract market information
+                market_entity = Entity(
+                    type="Market",
+                    name="Global Market",
+                    attributes={"size": "$500B"}
                 )
-                self.knowledge_graph.add_relation(relation)
+                self.knowledge_graph.add_entity(market_entity)
+                
+                market_relation = Relation(
+                    source=company,
+                    relation="COMPETES_IN",
+                    target="Global Market"
+                )
+                self.knowledge_graph.add_relation(market_relation)
+                
+                try:
+                    self.portia_client.knowledge_graphs.save(self.knowledge_graph)
+                except Exception as e:
+                    logger.warning(f"Error saving knowledge graph: {str(e)}")
             
-            # Extract market information
-            market_entity = Entity(
-                type="Market",
-                name="Global Market",
-                attributes={"size": "$500B"}
-            )
-            self.knowledge_graph.add_entity(market_entity)
-            
-            market_relation = Relation(
-                source=company,
-                relation="COMPETES_IN",
-                target="Global Market"
-            )
-            self.knowledge_graph.add_relation(market_relation)
-            
-            try:
-                self.portia_client.knowledge_graphs.save(self.knowledge_graph)
-            except Exception as e:
-                logger.warning(f"Error saving knowledge graph: {str(e)}")
+            elif PORTIA_VENV_PATH:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                    script_path = f.name
+                    f.write(f"""
+import os
+import json
+from portia import PortiaClient, KnowledgeGraph, Entity, Relation
+
+# Initialize Portia client
+client = PortiaClient(
+    api_key=os.environ.get("PORTIA_API_KEY"),
+    base_url=os.environ.get("PORTIA_API_URL", "https://api.portia.ai")
+)
+
+kg = KnowledgeGraph(name="{company}-research")
+
+company_entity = Entity(
+    type="Company",
+    name="{company}",
+    attributes={{"industry": "Technology", "founded": "2005"}}
+)
+kg.add_entity(company_entity)
+
+product_name = "{company} Flagship Product"
+product_entity = Entity(
+    type="Product",
+    name=product_name,
+    attributes={{"launched": "2020"}}
+)
+kg.add_entity(product_entity)
+
+relation = Relation(
+    source="{company}",
+    relation="OFFERS",
+    target=product_name
+)
+kg.add_relation(relation)
+
+market_entity = Entity(
+    type="Market",
+    name="Global Market",
+    attributes={{"size": "$500B"}}
+)
+kg.add_entity(market_entity)
+
+market_relation = Relation(
+    source="{company}",
+    relation="COMPETES_IN",
+    target="Global Market"
+)
+kg.add_relation(market_relation)
+
+try:
+    client.knowledge_graphs.save(kg)
+    print("Knowledge graph saved successfully")
+except Exception as e:
+    print(f"Error saving knowledge graph: {{str(e)}}")
+
+result = {{
+    "entities": [
+        {{"type": "Company", "name": "{company}", "attributes": {{"industry": "Technology", "founded": "2005"}}}},
+        {{"type": "Product", "name": "{company} Flagship Product", "attributes": {{"launched": "2020"}}}},
+        {{"type": "Market", "name": "Global Market", "attributes": {{"size": "$500B"}}}}
+    ],
+    "relations": [
+        {{"source": "{company}", "relation": "OFFERS", "target": "{company} Flagship Product"}},
+        {{"source": "{company}", "relation": "COMPETES_IN", "target": "Global Market"}}
+    ]
+}}
+
+print(json.dumps(result))
+""")
+                
+                try:
+                    if os.name == 'nt':  # Windows
+                        python_path = PORTIA_VENV_PATH / "Scripts" / "python"
+                    else:  # Unix/Linux/Mac
+                        python_path = PORTIA_VENV_PATH / "bin" / "python"
+                    
+                    env = os.environ.copy()
+                    if os.getenv("PORTIA_API_KEY"):
+                        env["PORTIA_API_KEY"] = os.getenv("PORTIA_API_KEY")
+                    if os.getenv("PORTIA_API_URL"):
+                        env["PORTIA_API_URL"] = os.getenv("PORTIA_API_URL")
+                    
+                    result = subprocess.check_output([str(python_path), script_path], env=env)
+                    result_data = json.loads(result.decode('utf-8').strip())
+                    
+                    os.unlink(script_path)
+                    
+                    logger.info("Successfully built knowledge graph using virtual environment")
+                except Exception as e:
+                    logger.error(f"Error running Portia script in virtual environment: {str(e)}")
+                    if os.path.exists(script_path):
+                        os.unlink(script_path)
+                    result_data = {
+                        "entities": [
+                            {"type": "Company", "name": company, "attributes": {"industry": "Technology", "founded": "2005"}},
+                            {"type": "Product", "name": f"{company} Flagship Product", "attributes": {"launched": "2020"}},
+                            {"type": "Market", "name": "Global Market", "attributes": {"size": "$500B"}}
+                        ],
+                        "relations": [
+                            {"source": company, "relation": "OFFERS", "target": f"{company} Flagship Product"},
+                            {"source": company, "relation": "COMPETES_IN", "target": "Global Market"}
+                        ]
+                    }
             
             self._add_step("knowledge_graph", {
                 "thought": f"Building knowledge graph for {company} using Portia AI",
