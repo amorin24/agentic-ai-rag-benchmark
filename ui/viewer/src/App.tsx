@@ -104,21 +104,21 @@ const agentRunnerApi = {
 };
 
 function App() {
+  return (
+    <LogProvider maxLogs={1000}>
+      <AppContent />
+    </LogProvider>
+  );
+}
+
+function AppContent() {
   const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [results, setResults] = useState<AgentResults>({});
   const [availableAgents, setAvailableAgents] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const companyOptions = [
-    'Apple Inc.',
-    'Microsoft Corporation',
-    'Amazon.com Inc.',
-    'Tesla Inc.',
-    'Netflix Inc.',
-    'Google LLC',
-  ];
+  const { addLog } = useLogContext();
 
   useEffect(() => {
     const fetchAgents = async () => {
