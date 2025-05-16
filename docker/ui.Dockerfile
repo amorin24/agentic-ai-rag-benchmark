@@ -3,7 +3,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY ui/viewer/package*.json ./
-RUN npm install --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
 COPY ui/viewer/ ./
 
